@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>感染対策 VR & シミュレーション（試作）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- A-Frame（VR用） -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <h1>感染対策 VR & シミュレーション（試作版）</h1>
+      <p class="subtitle">
+        早期臨床実習III：VR等を用いた感染対策予防演習（手指衛生・PPE着脱） /
+        臨床実習：シミュレーション教育に発展可能なプロトタイプ
+      </p>
+    </header>
+
+    <main class="layout">
+      <!-- 左：VR病室エリア -->
+      <section class="panel panel-vr">
+        <h2>VR 病室で手指衛生ポイントを探す</h2>
+        <p class="section-desc">
+          マウスドラッグやスマホの向きを変えて病室内を見回し、
+          光っているポイントをクリックしてください。<br />
+          どこで手指衛生が必要か、右側の解説と下の進捗に反映されます。
+        </p>
+
+        <!-- VRシーン -->
+        <div class="vr-wrapper">
+          <a-scene
+            embedded
+            renderer="antialias: true"
+            vr-mode-ui="enabled: false"
+          >
+            <!-- 環境光 -->
+            <a-entity
+              light="type: ambient; color: #ffffff; intensity: 0.8"
+            ></a-entity>
+            <!-- 天井ライトっぽい -->
+            <a-entity
+              light="type: point; intensity: 0.7; distance: 10"
+              position="0 3 -2"
+            ></a-entity>
+
+            <!-- 床 -->
+            <a-plane
+              position="0 0 -3"
+              rotation="-90 0 0"
+              width="8"
+              height="8"
+              color="#e0e0e0"
+            ></a-plane>
+
+            <!-- 壁 -->
+            <a-box
+              position="0 1.5 -7"
+              depth="0.2"
+              height="3"
+              width="8"
+              color="#cfd8dc"
+            ></a-box>
+
+            <!-- ベッド -->
+            <a-box
+              position="0 0.6 -4"
+              depth="2.2"
+              height="0.5"
+              width="2.5"
+              color="#90caf9"
+            ></a-box>
+            <!-- ベッドのマット -->
+            <a-box
+              position="0 1.0 -4"
+              depth="2.0"
+              height="0.2"
+              width="2.3"
+              color="#bbdefb"
+            ></a-box>
+            <!-- ベッドのラベル -->
+            <a-text
+              value="PATIENT BED"
+              position="0 0.9 -2"
+              align="center"
+              color="#0d47a1"
+              width="5"
+            >
+            </a-text>
+
+            <!-- 患者：寝そべった胴体 -->
+            <a-box
+              position="0 1.15 -4"
+              depth="1.2"
+              height="0.35"
+              width="1.3"
+              color="#ffe0b2"
+            >
+            </a-box>
+
+            <!-- 患者の頭（球） -->
+            <a-sphere position="0.5 1.3 -3.4" radius="0.22" color="#84331F">
+            </a-sphere>
+
+            <!-- ドア -->
+            <a-box
+              position="-3 1.3 -5"
+              depth="0.1"
+              height="2.4"
+              width="1.2"
+              color="#8d6e63"
+            ></a-box>
+
+            <!-- 手指消毒ディスペンサー（ドア横） -->
+            <a-box
+              position="-2.35 1.4 -5"
+              depth="0.1"
+              height="0.4"
+              width="0.25"
+              color="#ffffff"
+            ></a-box>
+
+            <!-- 手洗いシンク -->
+            <a-box
+              position="3 0.9 -4"
+              depth="0.6"
+              height="0.4"
+              width="1.2"
+              color="#b0bec5"
+            ></a-box>
+            <!-- シンクのラベル -->
+            <a-text
+              value="SINK"
+              position="2.7 1.45 -4"
+              align="center"
+              color="#004d40"
+              width="10"
+            >
+            </a-text>
+
+            <!-- ホットスポット：ドア前（入室前手指衛生） -->
+            <a-sphere
+              id="hotspot-door"
+              class="clickable hotspot"
+              position="-2.4 1.8 -4.8"
+              radius="0.15"
+              color="#ffca28"
+              animation__pulse="property: scale; dir: alternate; dur: 900; loop: true; to: 1.3 1.3 1.3"
+            ></a-sphere>
+
+            <!-- ホットスポット：ベッドサイド（患者接触前後） -->
+            <a-sphere
+              id="hotspot-bed"
+              class="clickable hotspot"
+              position="0.9 1.5 -3.2"
+              radius="0.15"
+              color="#ffca28"
+              animation__pulse="property: scale; dir: alternate; dur: 900; loop: true; to: 1.3 1.3 1.3"
+            ></a-sphere>
+
+            <!-- ホットスポット：シンク（目に見える汚染後など） -->
+            <a-sphere
+              id="hotspot-sink"
+              class="clickable hotspot"
+              position="3 1.6 -3.4"
+              radius="0.15"
+              color="#ffca28"
+              animation__pulse="property: scale; dir: alternate; dur: 900; loop: true; to: 1.3 1.3 1.3"
+            ></a-sphere>
+
+            <!-- カメラ＋マウス視線カーソル -->
+            <a-entity position="0 1.6 0">
+              <a-entity camera look-controls></a-entity>
+            </a-entity>
+            <a-entity
+              cursor="rayOrigin: mouse"
+              raycaster="objects: .clickable"
+            ></a-entity>
+          </a-scene>
+        </div>
+
+        <!-- 進捗＆ヒント -->
+        <div class="vr-status-bar">
+          <span id="vr-progress">発見したポイント: 0 / 3</span>
+          <span id="vr-complete" class="vr-complete-msg"></span>
+          <button id="vr-reset-btn" class="btn secondary vr-reset-btn">
+            リセット
+          </button>
+        </div>
+        <ul class="vr-hints">
+          <li>ドア付近：病室の入室前・退出後</li>
+          <li>ベッドサイド：患者接触の前後</li>
+          <li>シンク：目に見える汚染があるときの手洗い</li>
+        </ul>
+      </section>
+
+      <!-- 右：解説 & PPEシミュレーション -->
+      <section class="panel panel-info">
+        <div class="info-block">
+          <h2>手指衛生ポイントの解説</h2>
+          <p id="vr-info-title" class="info-title">
+            ポイントをクリックすると、ここに説明が表示されます。
+          </p>
+          <p id="vr-info-body" class="info-body">
+            例：<br />
+            ・入室前・退出後<br />
+            ・患者接触前・後<br />
+            ・体液暴露後<br />
+            など、<a
+              class="button"
+              href="https://www.who.int/publications/m/item/five-moments-for-hand-hygiene"
+              target="_blank"
+              rel="noopener noreferrer"
+              >WHO「5 moments」</a
+            >
+            を意識させることができます。
+          </p>
+        </div>
+
+        <div class="info-block">
+          <h2>PPE 着脱シミュレーション（手順クイズ）</h2>
+          <p class="section-desc">
+            下のボタンから順番にクリックして、<strong>PPEを着用する手順</strong>を指定してください。<br />
+            全て選んだら「採点する」を押すと、正解とフィードバックが表示されます。
+          </p>
+
+          <div class="ppe-quiz">
+            <div class="ppe-available">
+              <h3>手順候補</h3>
+              <p class="small-note">
+                ※ 文言や順番は施設のマニュアルに合わせて自由に編集してください。
+              </p>
+              <div id="ppe-options" class="ppe-options">
+                <!-- JSでボタンを生成 -->
+              </div>
+            </div>
+
+            <div class="ppe-selected">
+              <h3>選択した順番</h3>
+              <ol id="ppe-sequence" class="ppe-sequence"></ol>
+            </div>
+
+            <div class="ppe-actions">
+              <button id="ppe-check-btn" class="btn primary">採点する</button>
+              <button id="ppe-reset-btn" class="btn secondary">リセット</button>
+            </div>
+
+            <div id="ppe-result" class="ppe-result"></div>
+          </div>
+          <!-- ▼ 説明 → クリックで動画再生に切り替わるコンテナ -->
+          <div
+            id="video-container"
+            style="
+              width: 560px;
+              height: 315px;
+              border: 2px solid #ccc;
+              border-radius: 10px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background: #fafafa;
+              cursor: pointer;
+              position: relative;
+            "
+          >
+            <div
+              id="video-description"
+              style="
+                padding: 20px;
+                text-align: left;
+                font-size: 1.1rem;
+                line-height: 1.6;
+                color: #333;
+              "
+            >
+              <strong>【ガウンテクニックの学習動画】</strong><br />
+              看護roo!【公式】ガウンテクニックーガウンの付け方と外し方<br />
+              から引用しています。<br />
+              <p>
+                <small>
+                  *この「感染対策 VR &
+                  シミュレーション」は、本動画の撮影・編集・監修には関与しておりません。
+                </small>
+              </p>
+            </div>
+
+            <!-- 再生アイコン（任意で追加） -->
+            <div
+              style="
+                position: absolute;
+                bottom: 15px;
+                right: 15px;
+                font-size: 14px;
+                color: #555;
+              "
+            >
+              ▶ 再生
+            </div>
+          </div>
+
+          <script>
+            document
+              .getElementById("video-container")
+              .addEventListener("click", function () {
+                const container = document.getElementById("video-container");
+
+                // iframe を生成
+                const iframe = document.createElement("iframe");
+                iframe.width = "560";
+                iframe.height = "315";
+                iframe.src =
+                  "https://www.youtube.com/embed/p2LX1baRKGA?autoplay=1";
+                iframe.frameBorder = "0";
+                iframe.allow =
+                  "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+                iframe.allowFullscreen = true;
+
+                // コンテナの中身を iframe に置き換える
+                container.innerHTML = "";
+                container.appendChild(iframe);
+              });
+          </script>
+        </div>
+
+        <div class="info-block">
+          <h2>教育的な使い方の例</h2>
+          <ul class="usage-list">
+            <li>
+              早期臨床実習IIIでは、このページを使って<strong>VR＋実技演習</strong>を組み合わせる。
+            </li>
+            <li>
+              OSCE形式のチェックリストと連動させ、評価シートを別紙／別画面で用意する。
+            </li>
+            <li>
+              今後、救命救急シナリオや予防接種カウンセリングVRを追加する。
+            </li>
+          </ul>
+          <h2>リンク</h2>
+          <ul class="links-list">
+            <li>
+              <a
+                class="button"
+                href="https://www.who.int/publications/m/item/five-moments-for-hand-hygiene"
+                target="_blank"
+                rel="noopener noreferrer"
+                >WHO「5 moments」</a
+              >
+            </li>
+            <li>
+              <a
+                class="button"
+                href="https://www.youtube.com/watch?v=p2LX1baRKGA"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                看護roo!【公式】YouTube：ガウンテクニック
+              </a>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        試作版：感染対策 VR & シミュレーション教材（HTML / CSS / JS のみで動作）
+      </p>
+      <p>ChatGPTによるコード支援を受けて作成。</p>
+      <p>© 2025 bactPlatform</p>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+      document
+        .getElementById("video-container")
+        .addEventListener("click", function () {
+          const container = document.getElementById("video-container");
+
+          // iframe を生成
+          const iframe = document.createElement("iframe");
+          iframe.width = "560";
+          iframe.height = "315";
+          iframe.src = "https://www.youtube.com/embed/p2LX1baRKGA?autoplay=1";
+          iframe.frameBorder = "0";
+          iframe.allow =
+            "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+          iframe.allowFullscreen = true;
+
+          // コンテナの中身を iframe に置き換える
+          container.innerHTML = "";
+          container.appendChild(iframe);
+        });
+    </script>
+  </body>
+</html>
