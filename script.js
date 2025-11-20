@@ -99,7 +99,7 @@ function resetVRHotspots() {
   }
   if (infoBody) {
     infoBody.innerHTML =
-      "例：<br />・入室前／退出後<br />・患者接触前後<br />・体液暴露後<br />など、WHO「5 moments」を意識させることができます。";
+      "例：<br />・入室前・退出後<br />・患者接触前・後<br />・体液暴露後<br />など、<a class='button' href='https://www.who.int/publications/m/item/five-moments-for-hand-hygiene' target='_blank' rel='noopener noreferrer'>WHO「5 moments」</a > を意識させることができます。";
   }
 
   updateVRProgress();
