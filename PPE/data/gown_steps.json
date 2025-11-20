@@ -1,0 +1,44 @@
+[
+  {
+    "id": "g1",
+    "phase": "donning",
+    "label": "ガウンを広げて、表裏と汚染面・清潔面を確認する",
+    "actionKey": "showOutline",
+    "notes": "前面（患者側）が汚染面になることを意識させる。"
+  },
+  {
+    "id": "g2",
+    "phase": "donning",
+    "label": "袖に腕を通す",
+    "actionKey": "setSleevesOn",
+    "notes": "手首までしっかり通し、服との隙間を減らす。"
+  },
+  {
+    "id": "g3",
+    "phase": "donning",
+    "label": "首のひもを結ぶ",
+    "actionKey": "tieNeck",
+    "notes": "後ろでしっかり固定し、前面を覆えるようにする。"
+  },
+  {
+    "id": "g4",
+    "phase": "donning",
+    "label": "腰のひもを結び、前面を覆う",
+    "actionKey": "tieWaist",
+    "notes": "前を十分に重ねて、汚染面が外側になるように調整する。"
+  },
+  {
+    "id": "g5",
+    "phase": "doffing",
+    "label": "前面の汚染面に触れないように、ガウンを外し始める",
+    "actionKey": "startDoff",
+    "notes": "外すときは内側（清潔面）を持つことを意識する。"
+  },
+  {
+    "id": "g6",
+    "phase": "doffing",
+    "label": "ガウンを丸めて廃棄する",
+    "actionKey": "discard",
+    "notes": "汚染面が内側になるように丸め、指定の廃棄容器へ。"
+  }
+]

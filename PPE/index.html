@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>bactVR PPE Room</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- A-Frame 本体 -->
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <h1>bactVR / PPE Training Room</h1>
+      <p class="subtitle">
+        パネルをタップして PPE を装着・脱衣し、正しい順番を確認するミニVR
+      </p>
+    </header>
+
+    <main class="layout">
+      <!-- 左：VR空間 -->
+      <section class="panel panel-vr">
+        <h2>VRビュー</h2>
+        <p class="section-desc">
+          右側のパネルをタップすると、中央のマネキンに PPE が装着されます。
+          着用フェーズが終わると、自動的に脱衣フェーズに切り替わります。
+        </p>
+
+        <div class="vr-wrapper">
+          <a-scene
+            embedded
+            renderer="antialias: true"
+            vr-mode-ui="enabled: false"
+            cursor="rayOrigin: mouse"
+            raycaster="objects: .clickable"
+          >
+            <!-- 画像アセット -->
+            <a-assets>
+              <img id="img-manekin" src="assets/manekin.png" />
+              <img id="img-gown" src="assets/gown.png" />
+              <img id="img-mask" src="assets/mask.png" />
+              <img id="img-goggle" src="assets/goggle.png" />
+              <img id="img-gloveL" src="assets/gloveL.png" />
+              <img id="img-gloveR" src="assets/gloveR.png" />
+            </a-assets>
+
+            <!-- 環境光＆床・壁 -->
+            <a-entity
+              light="type: ambient; color: #ffffff; intensity: 0.9"
+            ></a-entity>
+            <a-entity
+              light="type: directional; color: #ffffff; intensity: 0.4"
+              position="2 3 1"
+            ></a-entity>
+
+            <a-plane
+              position="0 0 -3"
+              rotation="-90 0 0"
+              width="8"
+              height="8"
+              color="#e0e0e0"
+            ></a-plane>
+
+            <a-box
+              position="0 2 -6"
+              depth="0.2"
+              height="4"
+              width="8"
+              color="#cfd8dc"
+            ></a-box>
+
+            <!-- マネキン＋PPE -->
+            <a-entity id="avatar" position="0 0 -3">
+              <!-- ベースのマネキン -->
+              <a-image
+                id="base-manekin"
+                src="#img-manekin"
+                position="0 1.6 0"
+                scale="1.4 1.4 1"
+              ></a-image>
+
+              <!-- ガウン -->
+              <a-image
+                id="ppe-gown"
+                src="#img-gown"
+                visible="false"
+                class="ppe-clickable clickable"
+                position="0.01 1.3 0.01"
+                scale="1.15 1.1 1"
+              ></a-image>
+
+              <!-- マスク -->
+              <a-image
+                id="ppe-mask"
+                src="#img-mask"
+                visible="false"
+                class="ppe-clickable clickable"
+                position="0 1.9 0.02"
+                scale="0.4 0.2 1"
+              ></a-image>
+
+              <!-- ゴーグル -->
+              <a-image
+                id="ppe-goggle"
+                src="#img-goggle"
+                visible="false"
+                class="ppe-clickable clickable"
+                position="0 2.0 0.03"
+                scale="0.4 0.2 1"
+              ></a-image>
+
+              <!-- 手袋 左右 -->
+              <a-image
+                id="ppe-gloveR"
+                src="#img-gloveR"
+                visible="false"
+                class="ppe-clickable clickable"
+                position="-0.55 1.2 0.02"
+                scale="0.4 0.4 1"
+              ></a-image>
+              <a-image
+                id="ppe-gloveL"
+                src="#img-gloveL"
+                visible="false"
+                class="ppe-clickable clickable"
+                position="0.55 1.2 0.02"
+                scale="0.4 0.4 1"
+              ></a-image>
+            </a-entity>
+
+            <!-- PPE パネル（右側の棚） -->
+            <a-entity id="panel-shelf" position="1.8 1.6 -3">
+              <!-- アルコール -->
+              <a-plane
+                id="panel-alcohol"
+                class="panel-clickable clickable"
+                position="0 0.9 0"
+                width="0.9"
+                height="0.4"
+                color="#ffffff"
+                material="shader: flat; opacity: 0.95"
+              ></a-plane>
+              <a-text
+                value="ALCOHOL"
+                align="center"
+                width="2"
+                color="#1565c0"
+                position="0 0.9 0.01"
+              ></a-text>
+
+              <!-- ガウン -->
+              <a-plane
+                id="panel-gown"
+                class="panel-clickable clickable"
+                position="0 0.45 0"
+                width="0.9"
+                height="0.4"
+                color="#bbdefb"
+                material="shader: flat; opacity: 0.95"
+              ></a-plane>
+              <a-text
+                value="GOWN"
+                align="center"
+                width="2"
+                color="#0d47a1"
+                position="0 0.45 0.01"
+              ></a-text>
+
+              <!-- マスク -->
+              <a-plane
+                id="panel-mask"
+                class="panel-clickable clickable"
+                position="0 0 0"
+                width="0.9"
+                height="0.4"
+                color="#c8e6c9"
+                material="shader: flat; opacity: 0.95"
+              ></a-plane>
+              <a-text
+                value="MASK"
+                align="center"
+                width="2"
+                color="#1b5e20"
+                position="0 0 0.01"
+              ></a-text>
+
+              <!-- ゴーグル -->
+              <a-plane
+                id="panel-goggle"
+                class="panel-clickable clickable"
+                position="0 -0.45 0"
+                width="0.9"
+                height="0.4"
+                color="#e1f5fe"
+                material="shader: flat; opacity: 0.95"
+              ></a-plane>
+              <a-text
+                value="GOGGLES"
+                align="center"
+                width="2"
+                color="#01579b"
+                position="0 -0.45 0.01"
+              ></a-text>
+
+              <!-- 手袋 -->
+              <a-plane
+                id="panel-gloves"
+                class="panel-clickable clickable"
+                position="0 -0.9 0"
+                width="0.9"
+                height="0.4"
+                color="#f3e5f5"
+                material="shader: flat; opacity: 0.95"
+              ></a-plane>
+              <a-text
+                value="GLOVES"
+                align="center"
+                width="2"
+                color="#6a1b9a"
+                position="0 -0.9 0.01"
+              ></a-text>
+            </a-entity>
+
+            <!-- カメラ（固定） -->
+            <a-entity position="0 1.6 0">
+              <a-entity camera look-controls="enabled: false"></a-entity>
+            </a-entity>
+          </a-scene>
+        </div>
+      </section>
+
+      <!-- 右：メッセージ＆状態表示 -->
+      <section class="panel panel-ui">
+        <h2>ステータス</h2>
+
+        <div class="status-row">
+          <span class="status-label">Phase</span>
+          <span id="phase-label" class="status-value">Donning</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Step</span>
+          <span id="step-label" class="status-value">1 / 5</span>
+        </div>
+
+        <div class="message-box" id="message-box">
+          まずは
+          <strong>ALCOHOL</strong> パネルをタップして、手指消毒をしてください。
+        </div>
+
+        <div class="btn-row">
+          <button id="btn-reset" class="btn ghost">リセット</button>
+        </div>
+
+        <div class="log-box">
+          <h3>ログ</h3>
+          <ol id="log-list"></ol>
+        </div>
+
+        <div class="hint-box">
+          <h3>正しい順番（参考）</h3>
+          <p class="hint-text">
+            着用（Donning）: Alcohol → Gown → Mask → Goggles → Gloves<br />
+            脱衣（Doffing）: Gloves → Goggles → Gown → Mask → Alcohol
+          </p>
+          <p class="hint-note">
+            実際の手順は施設のマニュアルに従ってください。このVRは学習用イメージです。
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>bactVR PPE Room – prototype (HTML + A-Frame + JS)</p>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
