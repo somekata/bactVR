@@ -2,49 +2,57 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <title>感染対策 VR & シミュレーション（試作）</title>
+    <title>bactVR PPE Room</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- A-Frame（VR用） -->
+    <!-- A-Frame 本体 -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-rounded@3.0.1/dist/aframe-rounded.min.js"></script>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <header class="site-header">
-      <h1>感染対策 VR & シミュレーション（試作版）</h1>
+      <h1>bactVR / PPE Training Room</h1>
       <p class="subtitle">
-        早期臨床実習III：VR等を用いた感染対策予防演習（手指衛生・PPE着脱） /
-        臨床実習：シミュレーション教育に発展可能なプロトタイプ
+        パネルをタップして PPE を装着・脱衣し、正しい順番を確認するミニVR
       </p>
     </header>
 
     <main class="layout">
-      <!-- 左：VR病室エリア -->
+      <!-- 左：VR空間 -->
       <section class="panel panel-vr">
-        <h2>VR 病室で手指衛生ポイントを探す</h2>
+        <h2>VRビュー</h2>
         <p class="section-desc">
-          マウスドラッグやスマホの向きを変えて病室内を見回し、
-          光っているポイントをクリックしてください。<br />
-          どこで手指衛生が必要か、右側の解説と下の進捗に反映されます。
+          右側のパネルをタップすると、中央のマネキンに PPE が装着されます。
+          着用フェーズが終わると、自動的に脱衣フェーズに切り替わります。
         </p>
 
-        <!-- VRシーン -->
         <div class="vr-wrapper">
           <a-scene
             embedded
             renderer="antialias: true"
             vr-mode-ui="enabled: false"
+            cursor="rayOrigin: mouse"
+            raycaster="objects: .clickable"
           >
-            <!-- 環境光 -->
+            <!-- 画像アセット -->
+            <a-assets>
+              <img id="img-manekin" src="assets/manekin.png" />
+              <img id="img-gown" src="assets/gown.png" />
+              <img id="img-mask" src="assets/mask.png" />
+              <img id="img-goggle" src="assets/goggle.png" />
+              <img id="img-gloveL" src="assets/gloveL.png" />
+              <img id="img-gloveR" src="assets/gloveR.png" />
+            </a-assets>
+
+            <!-- 環境光＆床・壁 -->
             <a-entity
-              light="type: ambient; color: #ffffff; intensity: 0.8"
+              light="type: ambient; color: #ffffff; intensity: 0.9"
             ></a-entity>
-            <!-- 天井ライトっぽい -->
             <a-entity
-              light="type: point; intensity: 0.7; distance: 10"
-              position="0 3 -2"
+              light="type: directional; color: #ffffff; intensity: 0.4"
+              position="2 3 1"
             ></a-entity>
 
-            <!-- 床 -->
             <a-plane
               position="0 0 -3"
               rotation="-90 0 0"
@@ -53,343 +61,239 @@
               color="#e0e0e0"
             ></a-plane>
 
-            <!-- 壁 -->
             <a-box
-              position="0 1.5 -7"
+              position="0 2 -6"
               depth="0.2"
-              height="3"
+              height="4"
               width="8"
               color="#cfd8dc"
             ></a-box>
 
-            <!-- ベッド -->
-            <a-box
-              position="0 0.6 -4"
-              depth="2.2"
-              height="0.5"
-              width="2.5"
-              color="#90caf9"
-            ></a-box>
-            <!-- ベッドのマット -->
-            <a-box
-              position="0 1.0 -4"
-              depth="2.0"
-              height="0.2"
-              width="2.3"
-              color="#bbdefb"
-            ></a-box>
-            <!-- ベッドのラベル -->
-            <a-text
-              value="PATIENT BED"
-              position="0 0.9 -2"
-              align="center"
-              color="#0d47a1"
-              width="5"
-            >
-            </a-text>
+            <!-- マネキン＋PPE -->
+            <a-entity id="avatar" position="0 0 -3">
+              <!-- ベースのマネキン -->
+              <a-image
+                id="base-manekin"
+                src="#img-manekin"
+                position="0 1.6 0"
+                scale="1.4 1.4 1"
+              ></a-image>
 
-            <!-- 患者：寝そべった胴体 -->
-            <a-box
-              position="0 1.15 -4"
-              depth="1.2"
-              height="0.35"
-              width="1.3"
-              color="#ffe0b2"
-            >
-            </a-box>
+              <!-- ガウン -->
+              <a-image
+                id="ppe-gown"
+                src="#img-gown"
+                visible="false"
+                class="ppe-clickable clickable"
+                position="0.01 1.3 0.01"
+                scale="1.15 1.1 1"
+              ></a-image>
 
-            <!-- 患者の頭（球） -->
-            <a-sphere position="0.5 1.3 -3.4" radius="0.22" color="#84331F">
-            </a-sphere>
+              <!-- マスク -->
+              <a-image
+                id="ppe-mask"
+                src="#img-mask"
+                visible="false"
+                class="ppe-clickable clickable"
+                position="0 1.9 0.02"
+                scale="0.4 0.2 1"
+              ></a-image>
 
-            <!-- ドア -->
-            <a-box
-              position="-3 1.3 -5"
-              depth="0.1"
-              height="2.4"
-              width="1.2"
-              color="#8d6e63"
-            ></a-box>
+              <!-- ゴーグル -->
+              <a-image
+                id="ppe-goggle"
+                src="#img-goggle"
+                visible="false"
+                class="ppe-clickable clickable"
+                position="0 2.0 0.03"
+                scale="0.4 0.2 1"
+              ></a-image>
 
-            <!-- 手指消毒ディスペンサー（ドア横） -->
-            <a-box
-              position="-2.35 1.4 -5"
-              depth="0.1"
-              height="0.4"
-              width="0.25"
-              color="#ffffff"
-            ></a-box>
-
-            <!-- 手洗いシンク -->
-            <a-box
-              position="3 0.9 -4"
-              depth="0.6"
-              height="0.4"
-              width="1.2"
-              color="#b0bec5"
-            ></a-box>
-            <!-- シンクのラベル -->
-            <a-text
-              value="SINK"
-              position="2.7 1.45 -4"
-              align="center"
-              color="#004d40"
-              width="10"
-            >
-            </a-text>
-
-            <!-- ホットスポット：ドア前（入室前手指衛生） -->
-            <a-sphere
-              id="hotspot-door"
-              class="clickable hotspot"
-              position="-2.4 1.8 -4.8"
-              radius="0.15"
-              color="#ffca28"
-              animation__pulse="property: scale; dir: alternate; dur: 900; loop: true; to: 1.3 1.3 1.3"
-            ></a-sphere>
-
-            <!-- ホットスポット：ベッドサイド（患者接触前後） -->
-            <a-sphere
-              id="hotspot-bed"
-              class="clickable hotspot"
-              position="0.9 1.5 -3.2"
-              radius="0.15"
-              color="#ffca28"
-              animation__pulse="property: scale; dir: alternate; dur: 900; loop: true; to: 1.3 1.3 1.3"
-            ></a-sphere>
-
-            <!-- ホットスポット：シンク（目に見える汚染後など） -->
-            <a-sphere
-              id="hotspot-sink"
-              class="clickable hotspot"
-              position="3 1.6 -3.4"
-              radius="0.15"
-              color="#ffca28"
-              animation__pulse="property: scale; dir: alternate; dur: 900; loop: true; to: 1.3 1.3 1.3"
-            ></a-sphere>
-
-            <!-- カメラ＋マウス視線カーソル -->
-            <a-entity position="0 1.6 0">
-              <a-entity camera look-controls></a-entity>
+              <!-- 手袋 左右 -->
+              <a-image
+                id="ppe-gloveR"
+                src="#img-gloveR"
+                visible="false"
+                class="ppe-clickable clickable"
+                position="-0.55 1.2 0.02"
+                scale="0.4 0.4 1"
+              ></a-image>
+              <a-image
+                id="ppe-gloveL"
+                src="#img-gloveL"
+                visible="false"
+                class="ppe-clickable clickable"
+                position="0.55 1.2 0.02"
+                scale="0.4 0.4 1"
+              ></a-image>
             </a-entity>
-            <a-entity
-              cursor="rayOrigin: mouse"
-              raycaster="objects: .clickable"
-            ></a-entity>
+
+            <!-- PPE パネル（右側の棚） -->
+            <a-entity id="panel-shelf" position="1.8 1.6 -3">
+              <!-- アルコール -->
+              <a-plane
+                id="panel-alcohol"
+                class="panel-clickable clickable"
+                position="0 0.9 0"
+                width="1.2"
+                height="0.5"
+                color="#ffffff"
+                material="shader: flat; opacity: 0.98"
+                shadow="cast: true; receive: false"
+                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
+              ></a-plane>
+              <a-text
+                id="label-alcohol"
+                value="🧴 ALCOHOL"
+                align="center"
+                width="4"
+                color="#1565c0"
+                position="0 0.9 0.01"
+              ></a-text>
+
+              <!-- ガウン -->
+              <a-plane
+                id="panel-gown"
+                class="panel-clickable clickable"
+                position="0 0.45 0"
+                width="1.2"
+                height="0.5"
+                color="#bbdefb"
+                material="shader: flat; opacity: 0.98"
+                shadow="cast: true; receive: false"
+                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
+              ></a-plane>
+              <a-text
+                id="label-gown"
+                value="🧥 GOWN"
+                align="center"
+                width="4"
+                color="#0d47a1"
+                position="0 0.45 0.01"
+              ></a-text>
+
+              <!-- マスク -->
+              <a-plane
+                id="panel-mask"
+                class="panel-clickable clickable"
+                position="0 0 0"
+                width="1.2"
+                height="0.5"
+                color="#c8e6c9"
+                material="shader: flat; opacity: 0.98"
+                shadow="cast: true; receive: false"
+                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
+              ></a-plane>
+              <a-text
+                id="label-mask"
+                value="😷 MASK"
+                align="center"
+                width="4"
+                color="#1b5e20"
+                position="0 0 0.01"
+              ></a-text>
+
+              <!-- ゴーグル -->
+              <a-plane
+                id="panel-goggle"
+                class="panel-clickable clickable"
+                position="0 -0.45 0"
+                width="1.2"
+                height="0.5"
+                color="#e1f5fe"
+                material="shader: flat; opacity: 0.98"
+                shadow="cast: true; receive: false"
+                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
+              ></a-plane>
+              <a-text
+                id="label-goggle"
+                value="🥽 GOGGLES"
+                align="center"
+                width="4"
+                color="#01579b"
+                position="0 -0.45 0.01"
+              ></a-text>
+
+              <!-- 手袋 -->
+              <a-plane
+                id="panel-gloves"
+                class="panel-clickable clickable"
+                position="0 -0.9 0"
+                width="1.2"
+                height="0.5"
+                color="#f3e5f5"
+                material="shader: flat; opacity: 0.98"
+                shadow="cast: true; receive: false"
+                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
+              ></a-plane>
+              <a-text
+                id="label-gloves"
+                value="🧤 GLOVES"
+                align="center"
+                width="4"
+                color="#6a1b9a"
+                position="0 -0.9 0.01"
+              ></a-text>
+            </a-entity>
+
+            <!-- カメラ（固定） -->
+            <a-entity position="0 1.6 0">
+              <a-entity camera look-controls="enabled: false"></a-entity>
+            </a-entity>
           </a-scene>
         </div>
-
-        <!-- 進捗＆ヒント -->
-        <div class="vr-status-bar">
-          <span id="vr-progress">発見したポイント: 0 / 3</span>
-          <span id="vr-complete" class="vr-complete-msg"></span>
-          <button id="vr-reset-btn" class="btn secondary vr-reset-btn">
-            リセット
-          </button>
-        </div>
-        <ul class="vr-hints">
-          <li>ドア付近：病室の入室前・退出後</li>
-          <li>ベッドサイド：患者接触の前後</li>
-          <li>シンク：目に見える汚染があるときの手洗い</li>
-        </ul>
       </section>
 
-      <!-- 右：解説 & PPEシミュレーション -->
-      <section class="panel panel-info">
-        <div class="info-block">
-          <h2>手指衛生ポイントの解説</h2>
-          <p id="vr-info-title" class="info-title">
-            ポイントをクリックすると、ここに説明が表示されます。
-          </p>
-          <p id="vr-info-body" class="info-body">
-            例：<br />
-            ・入室前・退出後<br />
-            ・患者接触前・後<br />
-            ・体液暴露後<br />
-            など、<a
-              class="button"
-              href="https://www.who.int/publications/m/item/five-moments-for-hand-hygiene"
-              target="_blank"
-              rel="noopener noreferrer"
-              >WHO「5 moments」</a
-            >
-            を意識させることができます。
-          </p>
+      <!-- 右：メッセージ＆状態表示 -->
+      <section class="panel panel-ui">
+        <h2>ステータス</h2>
+
+        <div class="status-row">
+          <span class="status-label">Phase</span>
+          <span id="phase-label" class="status-value">Donning</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Step</span>
+          <span id="step-label" class="status-value">1 / 5</span>
         </div>
 
-        <div class="info-block">
-          <h2>PPE 着脱シミュレーション（手順クイズ）</h2>
-          <p class="section-desc">
-            下のボタンから順番にクリックして、<strong>PPEを着用する手順</strong>を指定してください。<br />
-            全て選んだら「採点する」を押すと、正解とフィードバックが表示されます。
-          </p>
-
-          <div class="ppe-quiz">
-            <div class="ppe-available">
-              <h3>手順候補</h3>
-              <p class="small-note">
-                ※ 文言や順番は施設のマニュアルに合わせて自由に編集してください。
-              </p>
-              <div id="ppe-options" class="ppe-options">
-                <!-- JSでボタンを生成 -->
-              </div>
-            </div>
-
-            <div class="ppe-selected">
-              <h3>選択した順番</h3>
-              <ol id="ppe-sequence" class="ppe-sequence"></ol>
-            </div>
-
-            <div class="ppe-actions">
-              <button id="ppe-check-btn" class="btn primary">採点する</button>
-              <button id="ppe-reset-btn" class="btn secondary">リセット</button>
-            </div>
-
-            <div id="ppe-result" class="ppe-result"></div>
-          </div>
-          <!-- ▼ 説明 → クリックで動画再生に切り替わるコンテナ -->
-          <div
-            id="video-container"
-            style="
-              width: 560px;
-              height: 315px;
-              border: 2px solid #ccc;
-              border-radius: 10px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              background: #fafafa;
-              cursor: pointer;
-              position: relative;
-            "
-          >
-            <div
-              id="video-description"
-              style="
-                padding: 20px;
-                text-align: left;
-                font-size: 1.1rem;
-                line-height: 1.6;
-                color: #333;
-              "
-            >
-              <strong>【ガウンテクニックの学習動画】</strong><br />
-              看護roo!【公式】ガウンテクニックーガウンの付け方と外し方<br />
-              から引用しています。<br />
-              <p>
-                <small>
-                  *この「感染対策 VR &
-                  シミュレーション」は、本動画の撮影・編集・監修には関与しておりません。
-                </small>
-              </p>
-            </div>
-
-            <!-- 再生アイコン（任意で追加） -->
-            <div
-              style="
-                position: absolute;
-                bottom: 15px;
-                right: 15px;
-                font-size: 14px;
-                color: #555;
-              "
-            >
-              ▶ 再生
-            </div>
-          </div>
-
-          <script>
-            document
-              .getElementById("video-container")
-              .addEventListener("click", function () {
-                const container = document.getElementById("video-container");
-
-                // iframe を生成
-                const iframe = document.createElement("iframe");
-                iframe.width = "560";
-                iframe.height = "315";
-                iframe.src =
-                  "https://www.youtube.com/embed/p2LX1baRKGA?autoplay=1";
-                iframe.frameBorder = "0";
-                iframe.allow =
-                  "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
-                iframe.allowFullscreen = true;
-
-                // コンテナの中身を iframe に置き換える
-                container.innerHTML = "";
-                container.appendChild(iframe);
-              });
-          </script>
+        <div class="message-box" id="message-box">
+          まずは
+          <strong>ALCOHOL</strong> パネルをタップして、手指消毒をしてください。
         </div>
 
-        <div class="info-block">
-          <h2>教育的な使い方の例</h2>
-          <ul class="usage-list">
-            <li>
-              早期臨床実習IIIでは、このページを使って<strong>VR＋実技演習</strong>を組み合わせる。
-            </li>
-            <li>
-              OSCE形式のチェックリストと連動させ、評価シートを別紙／別画面で用意する。
-            </li>
-            <li>
-              今後、救命救急シナリオや予防接種カウンセリングVRを追加する。
-            </li>
-          </ul>
-          <h2>リンク</h2>
-          <ul class="links-list">
-            <li>
-              <a
-                class="button"
-                href="https://www.who.int/publications/m/item/five-moments-for-hand-hygiene"
-                target="_blank"
-                rel="noopener noreferrer"
-                >WHO「5 moments」</a
-              >
-            </li>
-            <li>
-              <a
-                class="button"
-                href="https://www.youtube.com/watch?v=p2LX1baRKGA"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                看護roo!【公式】YouTube：ガウンテクニック
-              </a>
-            </li>
-          </ul>
+        <div class="btn-row">
+          <button id="btn-reset" class="btn ghost">リセット</button>
+        </div>
+
+        <div class="log-box">
+          <h3>ログ</h3>
+          <ol id="log-list"></ol>
+        </div>
+
+        <div class="hint-box">
+          <h3>正しい順番（参考）</h3>
+          <p class="hint-text">
+            <hr>
+            着用（Donning）: <br />
+            🧴 Alcohol → 🧥 Gown → 😷 Mask → 🥽 Goggles → 🧤 Gloves<br />
+            <hr>
+            脱衣（Doffing）: <br />
+            🧤 Gloves → 🧴 Alcohol → 🥽 Goggles → 🧥 Gown → 😷 Mask → 🧴
+            Alcohol
+            <hr>
+          </p>
+          <p class="hint-note">
+            実際の手順は施設のマニュアルに従ってください。このVRは学習用イメージです。
+          </p>
         </div>
       </section>
     </main>
 
     <footer class="site-footer">
-      <p>
-        試作版：感染対策 VR & シミュレーション教材（HTML / CSS / JS のみで動作）
-      </p>
-      <p>ChatGPTによるコード支援を受けて作成。</p>
-      <p>© 2025 bactPlatform</p>
+      <p>bactVR PPE Room – prototype (HTML + A-Frame + JS)</p>
     </footer>
 
     <script src="script.js"></script>
-    <script>
-      document
-        .getElementById("video-container")
-        .addEventListener("click", function () {
-          const container = document.getElementById("video-container");
-
-          // iframe を生成
-          const iframe = document.createElement("iframe");
-          iframe.width = "560";
-          iframe.height = "315";
-          iframe.src = "https://www.youtube.com/embed/p2LX1baRKGA?autoplay=1";
-          iframe.frameBorder = "0";
-          iframe.allow =
-            "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
-          iframe.allowFullscreen = true;
-
-          // コンテナの中身を iframe に置き換える
-          container.innerHTML = "";
-          container.appendChild(iframe);
-        });
-    </script>
   </body>
 </html>
