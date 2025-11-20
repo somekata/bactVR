@@ -1,6 +1,15 @@
 // 正しい順番
 const SEQ_DONNING = ["alcohol", "gown", "mask", "goggles", "gloves"];
-const SEQ_DOFFING = ["gloves-off", "goggles-off", "gown-off", "mask-off", "alcohol-end"];
+
+// 脱衣時：手袋 → アルコール → ゴーグル → ガウン → マスク → 最後のアルコール
+const SEQ_DOFFING = [
+  "gloves-off",
+  "alcohol-mid",
+  "goggles-off",
+  "gown-off",
+  "mask-off",
+  "alcohol-end",
+];
 
 let phase = "donning"; // "donning" or "doffing"
 let stepIndex = 0;
@@ -29,6 +38,13 @@ function cacheEls() {
   els.panelGoggle = document.getElementById("panel-goggle");
   els.panelGloves = document.getElementById("panel-gloves");
 
+  // ラベル（テキスト）
+  els.labelAlcohol = document.getElementById("label-alcohol");
+  els.labelGown = document.getElementById("label-gown");
+  els.labelMask = document.getElementById("label-mask");
+  els.labelGoggle = document.getElementById("label-goggle");
+  els.labelGloves = document.getElementById("label-gloves");
+
   // PPE（マネキン上）
   els.ppeGown = document.getElementById("ppe-gown");
   els.ppeMask = document.getElementById("ppe-mask");
@@ -42,27 +58,117 @@ function bindButtons() {
 }
 
 function bindPanelClicks() {
-  els.panelAlcohol.addEventListener("click", () => handleDonningAction("alcohol"));
-  els.panelGown.addEventListener("click", () => handleDonningAction("gown"));
-  els.panelMask.addEventListener("click", () => handleDonningAction("mask"));
-  els.panelGoggle.addEventListener("click", () => handleDonningAction("goggles"));
-  els.panelGloves.addEventListener("click", () => handleDonningAction("gloves"));
+  // ALCOHOL はフェーズとステップによって意味を変える
+  els.panelAlcohol.addEventListener("click", () => {
+    if (phase === "donning") {
+      // 着用フェーズ
+      handleDonningAction("alcohol");
+    } else if (phase === "doffing") {
+      const total = SEQ_DOFFING.length;
+
+      // すでに全ステップ完了している場合
+      if (stepIndex >= total) {
+        setMessage(
+          "すべての手順が完了しています。リセットボタンで最初からやり直せます。",
+          "ok"
+        );
+        return;
+      }
+
+      const expected = SEQ_DOFFING[stepIndex];
+
+      // 期待されるステップがアルコールのときだけ、正しく扱う
+      if (expected === "alcohol-mid" || expected === "alcohol-end") {
+        handleDoffingAction(expected);
+      } else {
+        // タイミングが違うアルコールは誤答扱い
+        handleDoffingAction("alcohol-wrong");
+      }
+    }
+  });
+
+  // それ以外の PPE パネルは「着用」用
+  els.panelGown.addEventListener("click", () =>
+    handleDonningAction("gown")
+  );
+  els.panelMask.addEventListener("click", () =>
+    handleDonningAction("mask")
+  );
+  els.panelGoggle.addEventListener("click", () =>
+    handleDonningAction("goggles")
+  );
+  els.panelGloves.addEventListener("click", () =>
+    handleDonningAction("gloves")
+  );
 }
 
 function bindPPEClicks() {
   // 脱衣時に使う
-  els.ppeGown.addEventListener("click", () => handleDoffingAction("gown-off"));
-  els.ppeMask.addEventListener("click", () => handleDoffingAction("mask-off"));
-  els.ppeGoggle.addEventListener("click", () => handleDoffingAction("goggles-off"));
-  els.ppeGloveL.addEventListener("click", () => handleDoffingAction("gloves-off"));
-  els.ppeGloveR.addEventListener("click", () => handleDoffingAction("gloves-off"));
+  els.ppeGown.addEventListener("click", () =>
+    handleDoffingAction("gown-off")
+  );
+  els.ppeMask.addEventListener("click", () =>
+    handleDoffingAction("mask-off")
+  );
+  els.ppeGoggle.addEventListener("click", () =>
+    handleDoffingAction("goggles-off")
+  );
+  els.ppeGloveL.addEventListener("click", () =>
+    handleDoffingAction("gloves-off")
+  );
+  els.ppeGloveR.addEventListener("click", () =>
+    handleDoffingAction("gloves-off")
+  );
+}
+
+/* ------------- パネルのランダム配置 ------------- */
+
+function randomizePanelOrder() {
+  if (
+    !els.panelGown ||
+    !els.panelMask ||
+    !els.panelGoggle ||
+    !els.panelGloves
+  )
+    return;
+
+  // 元のY座標候補
+  const ySlots = [0.45, 0, -0.45, -0.9];
+
+  // Fisher–Yates シャッフル
+  for (let i = ySlots.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [ySlots[i], ySlots[j]] = [ySlots[j], ySlots[i]];
+  }
+
+  const panels = [els.panelGown, els.panelMask, els.panelGoggle, els.panelGloves];
+  const labels = [els.labelGown, els.labelMask, els.labelGoggle, els.labelGloves];
+
+  panels.forEach((panel, idx) => {
+    const y = ySlots[idx];
+    if (!panel) return;
+    // パネル本体
+    panel.setAttribute("position", { x: 0, y, z: 0 });
+    // 対応するラベルも同じYに（少し手前のZ）
+    const label = labels[idx];
+    if (label) {
+      label.setAttribute("position", { x: 0, y, z: 0.01 });
+    }
+  });
+
+  // ALCOHOL とそのラベルは固定位置
+  if (els.panelAlcohol)
+    els.panelAlcohol.setAttribute("position", { x: 0, y: 0.9, z: 0 });
+  if (els.labelAlcohol)
+    els.labelAlcohol.setAttribute("position", { x: 0, y: 0.9, z: 0.01 });
 }
 
 /* ------------- 共通UI更新 ------------- */
 
 function updateStatus() {
   const total = phase === "donning" ? SEQ_DONNING.length : SEQ_DOFFING.length;
-  els.phaseLabel.textContent = phase === "donning" ? "Donning（着用）" : "Doffing（脱衣）";
+  els.phaseLabel.textContent =
+    phase === "donning" ? "Donning（着用）" : "Doffing（脱衣）";
   els.stepLabel.textContent = `${stepIndex + 1} / ${total}`;
 }
 
@@ -95,9 +201,12 @@ function resetAll() {
   setVisible(els.ppeGloveL, false);
   setVisible(els.ppeGloveR, false);
 
+  // パネルの順番を毎回ランダムにする
+  randomizePanelOrder();
+
   updateStatus();
   setMessage(
-    'まずは <strong>ALCOHOL</strong> パネルをタップして、手指消毒をしてください。'
+    'パネルの並びは毎回入れ替わります。<br>まずは <strong>ALCOHOL</strong> パネルをタップして、手指消毒をしてください。'
   );
 }
 
@@ -105,7 +214,27 @@ function resetAll() {
 
 function handleDonningAction(actionKey) {
   if (phase !== "donning") {
-    setMessage("現在は脱衣フェーズです。マネキンの PPE をタップして外してください。", "warn");
+    // すでにすべて完了しているケース
+    if (phase === "doffing" && stepIndex >= SEQ_DOFFING.length) {
+      setMessage(
+        "すべての手順が完了しています。リセットボタンで最初からやり直せます。",
+        "ok"
+      );
+    } else {
+      setMessage(
+        "現在は脱衣フェーズです。マネキンの PPE をタップして外してください。",
+        "warn"
+      );
+    }
+    return;
+  }
+
+  const total = SEQ_DONNING.length;
+  if (stepIndex >= total) {
+    setMessage(
+      "着用フェーズはすでに完了しています。マネキンの PPE をタップして脱衣してください。",
+      "warn"
+    );
     return;
   }
 
@@ -114,21 +243,26 @@ function handleDonningAction(actionKey) {
     // 見た目の更新
     applyDonningVisual(actionKey);
 
-    appendLog(`Donning: ${actionKey}`);
+    appendLog(`Donning: ${labelFromKey(actionKey)}`);
     stepIndex++;
 
     if (stepIndex >= SEQ_DONNING.length) {
       // 着用完了
-      setMessage("着用フェーズは OK です。次は正しい順番で脱衣してください。", "ok");
+      setMessage(
+        "着用フェーズは OK です。次はマネキンの PPE を正しい順番で外してください。",
+        "ok"
+      );
       enterDoffingPhase();
     } else {
-      const nextLabel = SEQ_DONNING[stepIndex];
-      setMessage(`Good! 次は <strong>${labelFromKey(nextLabel)}</strong> を選んでください。`, "ok");
+      setMessage(
+        "Good! 正しい順番です。次のステップを選んでください。",
+        "ok"
+      );
       updateStatus();
     }
   } else {
     setMessage(
-      `順番が違います。今は <strong>${labelFromKey(expected)}</strong> を行うタイミングです。`,
+      "順番が違います。もう一度よく考えて選んでみてください。",
       "warn"
     );
   }
@@ -166,30 +300,54 @@ function enterDoffingPhase() {
 
 function handleDoffingAction(actionKey) {
   if (phase !== "doffing") {
-    setMessage("まだ着用中です。右側のパネルから PPE を選んでください。", "warn");
+    setMessage(
+      "まだ着用中です。右側のパネルから PPE を選んで着用を完了させてください。",
+      "warn"
+    );
+    return;
+  }
+
+  const total = SEQ_DOFFING.length;
+  if (stepIndex >= total) {
+    setMessage(
+      "脱衣フェーズはすでに完了しています。リセットボタンで最初からやり直せます。",
+      "warn"
+    );
     return;
   }
 
   const expected = SEQ_DOFFING[stepIndex];
+
+  // アルコール誤タイミング
+  if (actionKey === "alcohol-wrong") {
+    setMessage(
+      "このタイミングでの手指消毒は正しい順番ではありません。もう一度考えてみてください。",
+      "warn"
+    );
+    return;
+  }
+
   if (actionKey === expected) {
     applyDoffingVisual(actionKey);
-    appendLog(`Doffing: ${actionKey}`);
+    appendLog(`Doffing: ${labelFromKey(actionKey)}`);
     stepIndex++;
 
     if (stepIndex >= SEQ_DOFFING.length) {
-      setMessage("Perfect! 着用・脱衣の順番が最後まで正しくできました。", "perfect");
+      setMessage(
+        "Perfect! 着用・脱衣の順番が最後まで正しくできました。",
+        "perfect"
+      );
       updateStatus();
     } else {
-      const nextLabel = SEQ_DOFFING[stepIndex];
       setMessage(
-        `Good! 次は <strong>${labelFromKey(nextLabel)}</strong> を行ってください。`,
+        "Good! 正しい順番です。次のステップを選んでください。",
         "ok"
       );
       updateStatus();
     }
   } else {
     setMessage(
-      `順番が違います。今は <strong>${labelFromKey(expected)}</strong> を行うタイミングです。`,
+      "順番が違います。もう一度よく考えて選んでみてください。",
       "warn"
     );
   }
@@ -211,9 +369,10 @@ function applyDoffingVisual(actionKey) {
       setVisible(els.ppeGloveL, false);
       setVisible(els.ppeGloveR, false);
       break;
+    case "alcohol-mid":
     case "alcohol-end":
     default:
-      // 最後の手指消毒は視覚的変化なし
+      // アルコールは視覚的変化なし
       break;
   }
 }
@@ -228,6 +387,7 @@ function setVisible(el, visible) {
 function labelFromKey(key) {
   switch (key) {
     case "alcohol":
+    case "alcohol-mid":
     case "alcohol-end":
       return "ALCOHOL（手指消毒）";
     case "gown":

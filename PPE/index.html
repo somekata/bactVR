@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- A-Frame 本体 -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-rounded@3.0.1/dist/aframe-rounded.min.js"></script>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -134,15 +135,18 @@
                 id="panel-alcohol"
                 class="panel-clickable clickable"
                 position="0 0.9 0"
-                width="0.9"
-                height="0.4"
+                width="1.2"
+                height="0.5"
                 color="#ffffff"
-                material="shader: flat; opacity: 0.95"
+                material="shader: flat; opacity: 0.98"
+                shadow="cast: true; receive: false"
+                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
               ></a-plane>
               <a-text
-                value="ALCOHOL"
+                id="label-alcohol"
+                value="🧴 ALCOHOL"
                 align="center"
-                width="2"
+                width="4"
                 color="#1565c0"
                 position="0 0.9 0.01"
               ></a-text>
@@ -152,15 +156,18 @@
                 id="panel-gown"
                 class="panel-clickable clickable"
                 position="0 0.45 0"
-                width="0.9"
-                height="0.4"
+                width="1.2"
+                height="0.5"
                 color="#bbdefb"
-                material="shader: flat; opacity: 0.95"
+                material="shader: flat; opacity: 0.98"
+                shadow="cast: true; receive: false"
+                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
               ></a-plane>
               <a-text
-                value="GOWN"
+                id="label-gown"
+                value="🧥 GOWN"
                 align="center"
-                width="2"
+                width="4"
                 color="#0d47a1"
                 position="0 0.45 0.01"
               ></a-text>
@@ -170,15 +177,18 @@
                 id="panel-mask"
                 class="panel-clickable clickable"
                 position="0 0 0"
-                width="0.9"
-                height="0.4"
+                width="1.2"
+                height="0.5"
                 color="#c8e6c9"
-                material="shader: flat; opacity: 0.95"
+                material="shader: flat; opacity: 0.98"
+                shadow="cast: true; receive: false"
+                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
               ></a-plane>
               <a-text
-                value="MASK"
+                id="label-mask"
+                value="😷 MASK"
                 align="center"
-                width="2"
+                width="4"
                 color="#1b5e20"
                 position="0 0 0.01"
               ></a-text>
@@ -188,15 +198,18 @@
                 id="panel-goggle"
                 class="panel-clickable clickable"
                 position="0 -0.45 0"
-                width="0.9"
-                height="0.4"
+                width="1.2"
+                height="0.5"
                 color="#e1f5fe"
-                material="shader: flat; opacity: 0.95"
+                material="shader: flat; opacity: 0.98"
+                shadow="cast: true; receive: false"
+                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
               ></a-plane>
               <a-text
-                value="GOGGLES"
+                id="label-goggle"
+                value="🥽 GOGGLES"
                 align="center"
-                width="2"
+                width="4"
                 color="#01579b"
                 position="0 -0.45 0.01"
               ></a-text>
@@ -206,15 +219,18 @@
                 id="panel-gloves"
                 class="panel-clickable clickable"
                 position="0 -0.9 0"
-                width="0.9"
-                height="0.4"
+                width="1.2"
+                height="0.5"
                 color="#f3e5f5"
-                material="shader: flat; opacity: 0.95"
+                material="shader: flat; opacity: 0.98"
+                shadow="cast: true; receive: false"
+                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
               ></a-plane>
               <a-text
-                value="GLOVES"
+                id="label-gloves"
+                value="🧤 GLOVES"
                 align="center"
-                width="2"
+                width="4"
                 color="#6a1b9a"
                 position="0 -0.9 0.01"
               ></a-text>
