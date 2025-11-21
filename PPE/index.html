@@ -20,12 +20,6 @@
     <main class="layout">
       <!-- 左：VR空間 -->
       <section class="panel panel-vr">
-        <h2>VRビュー</h2>
-        <p class="section-desc">
-          右側のパネルをタップすると、中央のマネキンに PPE が装着されます。
-          着用フェーズが終わると、自動的に脱衣フェーズに切り替わります。
-        </p>
-
         <div class="vr-wrapper">
           <a-scene
             embedded
@@ -242,21 +236,12 @@
             </a-entity>
           </a-scene>
         </div>
-      </section>
-
-      <!-- 右：メッセージ＆状態表示 -->
-      <section class="panel panel-ui">
-        <h2>ステータス</h2>
-
-        <div class="status-row">
-          <span class="status-label">Phase</span>
-          <span id="phase-label" class="status-value">Donning</span>
-        </div>
-        <div class="status-row">
-          <span class="status-label">Step</span>
-          <span id="step-label" class="status-value">1 / 5</span>
-        </div>
-
+        <br />
+        <h2>VRビュー</h2>
+        <p class="section-desc">
+          右側のパネルをタップすると、中央のマネキンに PPE が装着されます。
+          着用フェーズが終わると、自動的に脱衣フェーズに切り替わります。
+        </p>
         <div class="message-box" id="message-box">
           まずは
           <strong>ALCOHOL</strong> パネルをタップして、手指消毒をしてください。
@@ -264,6 +249,18 @@
 
         <div class="btn-row">
           <button id="btn-reset" class="btn ghost">リセット</button>
+        </div>
+      </section>
+
+      <!-- 右：メッセージ＆状態表示 -->
+      <section class="panel panel-ui">
+        <h2 id="status-label">ステータス</h2>
+
+        <div class="status-row">
+          <span class="status-label">Phase</span>
+          <span id="phase-label" class="status-value">Donning</span>
+          <span class="status-label">Step</span>
+          <span id="step-label" class="status-value">1 / 5</span>
         </div>
 
         <div class="log-box">

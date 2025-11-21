@@ -219,4 +219,58 @@ button.btn:hover {
   .vr-wrapper a-scene {
     height: 300px;
   }
+/* ▼ ログパネル：ガラス風カード */
+.log-box {
+  position: fixed;
+  top: 180px;
+  left: 12px;
+  width: 40%;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.25);   /* 半透明 */
+  backdrop-filter: blur(10px);             /* ガラス感 */
+  -webkit-backdrop-filter: blur(10px);
+
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 14px;
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* 浮かせる影 */
+
+  color: #0d47a1;
+  font-size: 0.8rem;
+  z-index: 9999;
+}
+/* ▼ ステータス行：ホバー式カード */
+.status-row {
+  position: fixed;
+  top: 120px;
+  left: 10px;
+  width: 90%;
+  margin:3%;
+  padding: 10px 20px;
+
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+
+  font-size: 1rem;
+  color: #003366;
+  z-index: 9998;
+
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.status-row:hover {
+  transform: scale(1.02);
+  background: rgba(255, 255, 255, 0.45);
+}
+
+/* ▼ 非表示にしたいラベル */
+#status-label {
+  display: none;
+}
 }
