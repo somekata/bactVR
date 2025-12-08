@@ -5,8 +5,8 @@ const SEQ_DONNING = ["alcohol", "gown", "mask", "goggles", "gloves"];
 const SEQ_DOFFING = [
   "gloves-off",
   "alcohol-mid",
-  "goggles-off",
   "gown-off",
+  "goggles-off",
   "mask-off",
   "alcohol-end",
 ];
