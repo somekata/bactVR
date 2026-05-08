@@ -5,845 +5,681 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>バイキンズARカメラ</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Yomogi&family=Zen Kurenaido&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Yomogi&family=Zen+Kurenaido&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0a0a1a;--panel:rgba(15,15,35,0.92);
+  --accent:#ff4fd8;--accent2:#4fffb0;--accent3:#ffe94f;
+  --text:#f0eeff;--muted:#8888aa;--border:rgba(255,79,216,0.3);
+}
+html,body{width:100%;height:100%;background:var(--bg);color:var(--text);
+  font-family:'Yomogi','Zen Kurenaido',cursive;overflow:hidden;touch-action:none;}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+/* ===== TAB BAR ===== */
+#tabBar{
+  position:fixed;top:0;left:0;right:0;
+  display:flex;z-index:200;
+  background:rgba(10,10,26,0.95);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(10px);
+}
+.tab-btn{
+  flex:1;font-family:inherit;font-size:0.82rem;
+  padding:12px 0 10px;border:none;background:transparent;
+  color:var(--muted);cursor:pointer;
+  border-bottom:2px solid transparent;transition:all 0.2s;
+  letter-spacing:0.03em;
+}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
 
-  :root {
-    --bg: #0a0a1a;
-    --panel: rgba(15,15,35,0.92);
-    --accent: #ff4fd8;
-    --accent2: #4fffb0;
-    --accent3: #ffe94f;
-    --text: #f0eeff;
-    --muted: #8888aa;
-    --border: rgba(255,79,216,0.3);
-  }
+/* ===== TAB PAGES ===== */
+.tab-page{
+  position:fixed;top:44px;left:0;right:0;bottom:0;
+  overflow-y:auto;display:none;
+}
+.tab-page.active{display:flex;flex-direction:column;}
 
-  html, body {
-    width: 100%; height: 100%;
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Yomogi', 'Zen Kurenaido', cursive;
-    overflow: hidden;
-    touch-action: none;
-  }
+/* ===== STARS ===== */
+.stars{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.star{position:absolute;width:2px;height:2px;background:#fff;border-radius:50%;
+  opacity:0;animation:twinkle var(--d,3s) var(--delay,0s) infinite;}
+@keyframes twinkle{0%,100%{opacity:0}50%{opacity:var(--op,0.8)}}
 
-  /* ===== SCREENS ===== */
-  .screen {
-    position: fixed; inset: 0;
-    display: flex; flex-direction: column;
-    transition: opacity 0.4s, transform 0.4s;
-  }
-  .screen.hidden {
-    opacity: 0; pointer-events: none; transform: translateY(30px);
-  }
+/* ===== AR PAGE ===== */
+#arPage{background:linear-gradient(160deg,#0a0a1a 0%,#1a0a2e 50%,#0a1a1a 100%);}
 
-  /* ===== SELECT SCREEN ===== */
-  #selectScreen {
-    background: linear-gradient(160deg, #0a0a1a 0%, #1a0a2e 50%, #0a1a1a 100%);
-    padding: 0;
-    overflow-y: auto;
-  }
+/* SCREEN LAYERS inside arPage */
+.screen{display:none;flex-direction:column;flex:1;}
+.screen.active{display:flex;}
 
-  .select-header {
-    padding: 28px 20px 10px;
-    text-align: center;
-  }
-  .select-header h1 {
-    font-size: 2rem;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: 0.05em;
-    margin-bottom: 4px;
-  }
-  .select-header p {
-    font-size: 0.78rem;
-    color: var(--muted);
-  }
+/* SELECT */
+.select-header{padding:20px 20px 8px;text-align:center;position:relative;z-index:1;}
+.select-header h1{font-size:1.9rem;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:.05em;margin-bottom:3px;}
+.select-header p{font-size:0.75rem;color:var(--muted);}
+.chara-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;padding:12px 12px 4px;position:relative;z-index:1;}
+.chara-card{background:rgba(255,255,255,.04);border:2px solid transparent;border-radius:14px;
+  padding:8px 5px 7px;text-align:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden;}
+.chara-card.selected{border-color:var(--accent);background:rgba(255,79,216,.12);transform:scale(1.03);}
+.chara-card img{width:100%;max-width:76px;height:76px;object-fit:contain;display:block;margin:0 auto 5px;}
+.chara-card .chara-name{font-size:0.6rem;color:var(--text);line-height:1.3;min-height:2.5em;}
+.chara-card .check-badge{position:absolute;top:5px;right:5px;width:18px;height:18px;
+  background:var(--accent);border-radius:50%;display:none;align-items:center;justify-content:center;
+  font-size:.6rem;color:#fff;font-weight:bold;box-shadow:0 0 8px var(--accent);}
+.chara-card.selected .check-badge{display:flex;}
+.select-all-row{display:flex;justify-content:center;gap:10px;padding:6px 14px 0;position:relative;z-index:1;}
+.btn-small{font-family:inherit;font-size:.72rem;padding:6px 16px;border-radius:20px;
+  border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);cursor:pointer;}
 
-  .chara-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    padding: 14px 14px 6px;
-  }
+/* POS */
+#posScreen{padding:24px 20px 16px;align-items:center;justify-content:center;gap:16px;}
+#posScreen h2{font-size:1.3rem;text-align:center;background:linear-gradient(90deg,var(--accent2),var(--accent3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+#posScreen p{font-size:.76rem;color:var(--muted);text-align:center;margin-top:-8px;}
+.pos-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:290px;}
+.pos-btn{font-family:inherit;background:rgba(255,255,255,.04);border:2px solid transparent;
+  border-radius:14px;padding:18px 8px;color:var(--text);font-size:.85rem;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:5px;transition:all .2s;}
+.pos-btn .pos-icon{font-size:1.5rem;}
+.pos-btn.selected{border-color:var(--accent2);background:rgba(79,255,176,.1);}
 
-  .chara-card {
-    background: rgba(255,255,255,0.04);
-    border: 2px solid transparent;
-    border-radius: 16px;
-    padding: 10px 6px 8px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
-  }
-  .chara-card::before {
-    content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(255,79,216,0.1), rgba(79,255,176,0.1));
-    opacity: 0;
-    transition: opacity 0.2s;
-  }
-  .chara-card.selected {
-    border-color: var(--accent);
-    background: rgba(255,79,216,0.12);
-    transform: scale(1.03);
-  }
-  .chara-card.selected::before { opacity: 1; }
-  .chara-card img {
-    width: 100%; max-width: 80px;
-    height: 80px;
-    object-fit: contain;
-    display: block;
-    margin: 0 auto 6px;
-  }
-  .chara-card .chara-name {
-    font-size: 0.62rem;
-    color: var(--text);
-    line-height: 1.3;
-    min-height: 2.6em;
-  }
-  .chara-card .check-badge {
-    position: absolute; top: 6px; right: 6px;
-    width: 20px; height: 20px;
-    background: var(--accent);
-    border-radius: 50%;
-    display: none;
-    align-items: center; justify-content: center;
-    font-size: 0.65rem;
-    color: #fff;
-    font-weight: bold;
-    box-shadow: 0 0 8px var(--accent);
-  }
-  .chara-card.selected .check-badge { display: flex; }
+/* BOTTOM NAV */
+.bottom-nav{padding:10px 14px 22px;display:flex;gap:9px;}
+.btn-back{font-family:inherit;font-size:.82rem;padding:11px 18px;border-radius:28px;
+  border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;flex:0 0 auto;}
+.btn-next{font-family:inherit;font-size:.9rem;padding:13px 0;border-radius:28px;border:none;
+  background:linear-gradient(90deg,var(--accent),#c020ff);color:#fff;cursor:pointer;flex:1;
+  font-weight:bold;letter-spacing:.05em;box-shadow:0 4px 18px rgba(255,79,216,.4);}
+.btn-next:disabled{background:#333;box-shadow:none;color:#666;}
 
-  .select-all-row {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    padding: 8px 14px 0;
-  }
-  .btn-small {
-    font-family: inherit;
-    font-size: 0.72rem;
-    padding: 6px 16px;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,0.05);
-    color: var(--text);
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .btn-small:active { transform: scale(0.95); }
+/* CAMERA */
+#cameraScreen{position:relative;flex:1;}
+#videoEl{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+#charaLayer{position:absolute;inset:0;pointer-events:none;z-index:10;}
+.ar-chara{position:absolute;filter:drop-shadow(0 4px 14px rgba(0,0,0,.7));}
+.ar-chara img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;}
+.ar-chara.draggable{pointer-events:auto;cursor:grab;touch-action:none;}
+.ar-chara.draggable:active{cursor:grabbing;}
 
-  /* ===== POSITION SCREEN ===== */
-  #posScreen {
-    background: linear-gradient(160deg, #0a0a1a 0%, #1a0a2e 50%, #0a1a1a 100%);
-    padding: 28px 20px 20px;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-  }
-  #posScreen h2 {
-    font-size: 1.4rem;
-    text-align: center;
-    background: linear-gradient(90deg, var(--accent2), var(--accent3));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  #posScreen p {
-    font-size: 0.78rem;
-    color: var(--muted);
-    text-align: center;
-    margin-top: -10px;
-  }
+#sizeControl{position:absolute;bottom:108px;left:50%;transform:translateX(-50%);
+  width:190px;background:rgba(0,0,0,.55);border-radius:18px;padding:7px 14px;
+  display:flex;align-items:center;gap:9px;backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.15);z-index:30;}
+#sizeControl.hidden{display:none;}
+#sizeControl span{font-size:.68rem;color:#ccc;white-space:nowrap;}
+#sizeSlider{flex:1;-webkit-appearance:none;height:4px;border-radius:2px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));outline:none;}
+#sizeSlider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;
+  border-radius:50%;background:#fff;box-shadow:0 0 6px rgba(255,79,216,.8);}
 
-  .pos-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: 14px;
-    width: 100%;
-    max-width: 300px;
-  }
-  .pos-btn {
-    font-family: inherit;
-    background: rgba(255,255,255,0.04);
-    border: 2px solid transparent;
-    border-radius: 16px;
-    padding: 22px 10px;
-    color: var(--text);
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
-  .pos-btn .pos-icon { font-size: 1.6rem; }
-  .pos-btn.selected {
-    border-color: var(--accent2);
-    background: rgba(79,255,176,0.1);
-  }
-  .pos-btn:active { transform: scale(0.95); }
+#dragHint{position:absolute;top:56px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.6);border-radius:14px;padding:5px 14px;
+  font-size:.68rem;color:var(--accent2);backdrop-filter:blur(6px);
+  border:1px solid rgba(79,255,176,.3);z-index:30;white-space:nowrap;
+  animation:fadeHint 3s ease forwards;}
+@keyframes fadeHint{0%{opacity:1}70%{opacity:1}100%{opacity:0;pointer-events:none}}
 
-  /* ===== BOTTOM NAV ===== */
-  .bottom-nav {
-    padding: 12px 16px 24px;
-    display: flex;
-    gap: 10px;
-    background: transparent;
-  }
-  .btn-back {
-    font-family: inherit;
-    font-size: 0.85rem;
-    padding: 12px 20px;
-    border-radius: 30px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-    flex: 0 0 auto;
-  }
-  .btn-next {
-    font-family: inherit;
-    font-size: 0.95rem;
-    padding: 14px 0;
-    border-radius: 30px;
-    border: none;
-    background: linear-gradient(90deg, var(--accent), #c020ff);
-    color: #fff;
-    cursor: pointer;
-    flex: 1;
-    font-weight: bold;
-    letter-spacing: 0.05em;
-    box-shadow: 0 4px 20px rgba(255,79,216,0.4);
-    transition: all 0.2s;
-  }
-  .btn-next:active { transform: scale(0.97); }
-  .btn-next:disabled {
-    background: #333;
-    box-shadow: none;
-    color: #666;
-  }
+#camControls{position:absolute;bottom:0;left:0;right:0;
+  padding:14px 18px 28px;display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(transparent,rgba(0,0,0,.7));z-index:30;}
+.btn-cam-back{font-family:inherit;font-size:.78rem;padding:9px 16px;border-radius:18px;
+  border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.5);color:#fff;cursor:pointer;backdrop-filter:blur(6px);}
+.btn-shutter{width:68px;height:68px;border-radius:50%;border:4px solid #fff;
+  background:rgba(255,255,255,.2);cursor:pointer;position:relative;backdrop-filter:blur(6px);transition:all .1s;}
+.btn-shutter::after{content:'';position:absolute;inset:6px;border-radius:50%;background:#fff;transition:all .1s;}
+.btn-shutter:active{transform:scale(.92);}
+.btn-shutter:active::after{background:var(--accent);}
+.btn-flip{font-family:inherit;font-size:.78rem;padding:9px 16px;border-radius:18px;
+  border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.5);color:#fff;cursor:pointer;backdrop-filter:blur(6px);}
+#flashEl{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:50;transition:opacity .08s;}
+#flashEl.flash{opacity:1;}
+#permError{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;
+  justify-content:center;gap:14px;padding:28px;background:rgba(0,0,0,.85);z-index:60;}
+#permError.show{display:flex;}
+#permError p{text-align:center;line-height:1.7;}
 
-  /* ===== CAMERA SCREEN ===== */
-  #cameraScreen {
-    background: #000;
-  }
+/* PREVIEW */
+#previewScreen{align-items:center;justify-content:center;gap:16px;
+  background:linear-gradient(160deg,#0a0a1a,#1a0a2e,#0a1a1a);}
+#previewImg{max-width:100%;max-height:calc(100vh - 220px);object-fit:contain;border-radius:12px;
+  box-shadow:0 8px 36px rgba(0,0,0,.8);}
+.preview-actions{display:flex;gap:11px;padding:0 18px;width:100%;}
+.btn-save{font-family:inherit;font-size:.9rem;padding:13px 0;border-radius:28px;border:none;
+  background:linear-gradient(90deg,var(--accent2),#00cc88);color:#000;font-weight:bold;cursor:pointer;flex:1;
+  box-shadow:0 4px 18px rgba(79,255,176,.4);}
+.btn-retake{font-family:inherit;font-size:.9rem;padding:13px 0;border-radius:28px;
+  border:1px solid var(--border);background:transparent;color:var(--text);cursor:pointer;flex:1;}
 
-  #videoEl {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-  }
-
-  #charaLayer {
-    position: absolute; inset: 0;
-    pointer-events: none;
-  }
-
-  .ar-chara {
-    position: absolute;
-    transition: none;
-    filter: drop-shadow(0 4px 16px rgba(0,0,0,0.7));
-  }
-  .ar-chara img {
-    width: 100%; height: 100%;
-    object-fit: contain;
-    display: block;
-  }
-
-  /* Single chara size control */
-  #sizeControl {
-    position: absolute;
-    bottom: 110px; left: 50%;
-    transform: translateX(-50%);
-    width: 200px;
-    background: rgba(0,0,0,0.55);
-    border-radius: 20px;
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.15);
-    z-index: 30;
-  }
-  #sizeControl.hidden { display: none; }
-  #sizeControl span { font-size: 0.7rem; color: #ccc; white-space: nowrap; }
-  #sizeSlider {
-    flex: 1;
-    -webkit-appearance: none;
-    height: 4px;
-    border-radius: 2px;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    outline: none;
-  }
-  #sizeSlider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 18px; height: 18px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 0 6px rgba(255,79,216,0.8);
-  }
-
-  /* Camera controls */
-  #camControls {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    padding: 16px 20px 32px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: linear-gradient(transparent, rgba(0,0,0,0.7));
-    z-index: 30;
-  }
-
-  .btn-cam-back {
-    font-family: inherit;
-    font-size: 0.8rem;
-    padding: 10px 18px;
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.3);
-    background: rgba(0,0,0,0.5);
-    color: #fff;
-    cursor: pointer;
-    backdrop-filter: blur(6px);
-  }
-
-  .btn-shutter {
-    width: 70px; height: 70px;
-    border-radius: 50%;
-    border: 4px solid #fff;
-    background: rgba(255,255,255,0.2);
-    cursor: pointer;
-    position: relative;
-    backdrop-filter: blur(6px);
-    transition: all 0.1s;
-    flex-shrink: 0;
-  }
-  .btn-shutter::after {
-    content: '';
-    position: absolute; inset: 6px;
-    border-radius: 50%;
-    background: #fff;
-    transition: all 0.1s;
-  }
-  .btn-shutter:active { transform: scale(0.92); }
-  .btn-shutter:active::after { background: var(--accent); }
-
-  .btn-flip {
-    font-family: inherit;
-    font-size: 0.8rem;
-    padding: 10px 18px;
-    border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.3);
-    background: rgba(0,0,0,0.5);
-    color: #fff;
-    cursor: pointer;
-    backdrop-filter: blur(6px);
-  }
-
-  /* Flash effect */
-  #flashEl {
-    position: absolute; inset: 0;
-    background: #fff;
-    opacity: 0;
-    pointer-events: none;
-    z-index: 50;
-    transition: opacity 0.08s;
-  }
-  #flashEl.flash { opacity: 1; }
-
-  /* ===== PREVIEW SCREEN ===== */
-  #previewScreen {
-    background: #000;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-  }
-
-  #previewImg {
-    max-width: 100%;
-    max-height: calc(100vh - 180px);
-    object-fit: contain;
-    border-radius: 12px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.8);
-  }
-
-  .preview-actions {
-    display: flex;
-    gap: 12px;
-    padding: 0 20px;
-    width: 100%;
-  }
-  .btn-save {
-    font-family: inherit;
-    font-size: 0.95rem;
-    padding: 14px 0;
-    border-radius: 30px;
-    border: none;
-    background: linear-gradient(90deg, var(--accent2), #00cc88);
-    color: #000;
-    font-weight: bold;
-    cursor: pointer;
-    flex: 1;
-    box-shadow: 0 4px 20px rgba(79,255,176,0.4);
-  }
-  .btn-retake {
-    font-family: inherit;
-    font-size: 0.95rem;
-    padding: 14px 0;
-    border-radius: 30px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text);
-    cursor: pointer;
-    flex: 1;
-  }
-
-  /* ===== PERMISSION ERROR ===== */
-  #permError {
-    position: absolute; inset: 0;
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    padding: 30px;
-    background: rgba(0,0,0,0.85);
-    z-index: 60;
-  }
-  #permError.show { display: flex; }
-  #permError p { text-align: center; line-height: 1.7; color: var(--text); }
-
-  /* Stars bg */
-  .stars {
-    position: fixed; inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    overflow: hidden;
-  }
-  .star {
-    position: absolute;
-    width: 2px; height: 2px;
-    background: #fff;
-    border-radius: 50%;
-    opacity: 0;
-    animation: twinkle var(--d, 3s) var(--delay, 0s) infinite;
-  }
-  @keyframes twinkle {
-    0%,100% { opacity: 0; }
-    50% { opacity: var(--op, 0.8); }
-  }
+/* ===== INFO PAGE ===== */
+#infoPage{background:linear-gradient(160deg,#0a0a1a 0%,#1a0a2e 50%,#0a1a1a 100%);
+  padding:16px 16px 40px;gap:0;}
+.info-section{margin-bottom:24px;}
+.info-section h3{font-size:1rem;color:var(--accent2);margin-bottom:10px;
+  border-left:3px solid var(--accent2);padding-left:10px;letter-spacing:.04em;}
+.info-box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;padding:14px 16px;line-height:1.85;font-size:.82rem;color:#ccc;}
+.info-box ul{padding-left:1.2em;}
+.info-box li{margin-bottom:4px;}
+.link-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;padding:12px 14px;margin-bottom:9px;
+  display:flex;flex-direction:column;gap:4px;text-decoration:none;
+  transition:all .2s;active-scale:.97;}
+.link-card:active{transform:scale(.97);}
+.link-card-name{font-size:.88rem;color:var(--text);font-weight:bold;}
+.link-card-desc{font-size:.73rem;color:var(--muted);line-height:1.4;}
+.link-card-open{font-size:.72rem;color:var(--accent);align-self:flex-start;
+  background:rgba(255,79,216,.1);padding:3px 10px;border-radius:10px;
+  border:1px solid rgba(255,79,216,.3);}
+.cat-label{font-size:.68rem;color:var(--accent3);letter-spacing:.04em;margin-bottom:6px;}
 </style>
 </head>
 <body>
-
-<!-- Stars -->
 <div class="stars" id="stars"></div>
 
-<!-- ===== SCREEN 1: CHARACTER SELECT ===== -->
-<div class="screen" id="selectScreen">
-  <div class="select-header">
-    <h1>🦠 バイキンズ</h1>
-    <p>いっしょに撮ろう！キャラを選んでね</p>
-  </div>
-
-  <div class="chara-grid" id="charaGrid"></div>
-
-  <div class="select-all-row">
-    <button class="btn-small" onclick="selectAll()">全員選ぶ</button>
-    <button class="btn-small" onclick="selectNone()">リセット</button>
-  </div>
-
-  <div style="flex:1"></div>
-  <div class="bottom-nav" style="padding-top:0">
-    <button class="btn-next" id="btnToPos" onclick="goToPos()" disabled>
-      場所を選ぶ →
-    </button>
-  </div>
+<!-- TAB BAR -->
+<div id="tabBar">
+  <button class="tab-btn active" onclick="switchTab('arPage',this)">📷 ARカメラ</button>
+  <button class="tab-btn" onclick="switchTab('infoPage',this)">ℹ️ 使い方・リンク</button>
 </div>
 
-<!-- ===== SCREEN 2: POSITION SELECT ===== -->
-<div class="screen hidden" id="posScreen">
-  <h2>どこに置く？</h2>
-  <p id="posNote">キャラが1体のとき：好きな場所を選べます</p>
+<!-- ===== AR PAGE ===== -->
+<div class="tab-page active" id="arPage">
 
-  <div class="pos-grid" id="posGrid">
-    <button class="pos-btn" data-pos="top-left"    onclick="selectPos(this)">
-      <span class="pos-icon">↖️</span><span>左上</span>
-    </button>
-    <button class="pos-btn" data-pos="top-right"   onclick="selectPos(this)">
-      <span class="pos-icon">↗️</span><span>右上</span>
-    </button>
-    <button class="pos-btn" data-pos="left"        onclick="selectPos(this)">
-      <span class="pos-icon">⬅️</span><span>左横</span>
-    </button>
-    <button class="pos-btn" data-pos="right"       onclick="selectPos(this)">
-      <span class="pos-icon">➡️</span><span>右横</span>
-    </button>
+  <!-- SCREEN: SELECT -->
+  <div class="screen active" id="selectScreen">
+    <div class="select-header">
+      <h1>🦠 バイキンズ</h1>
+      <p>いっしょに撮ろう！キャラを選んでね</p>
+    </div>
+    <div class="chara-grid" id="charaGrid"></div>
+    <div class="select-all-row">
+      <button class="btn-small" onclick="selectAll()">全員選ぶ</button>
+      <button class="btn-small" onclick="selectNone()">リセット</button>
+    </div>
+    <div style="flex:1"></div>
+    <div class="bottom-nav">
+      <button class="btn-next" id="btnToPos" onclick="goToPos()" disabled>場所を選ぶ →</button>
+    </div>
   </div>
 
-  <div style="flex:1"></div>
-  <div class="bottom-nav">
-    <button class="btn-back" onclick="goBack('selectScreen')">← 戻る</button>
-    <button class="btn-next" id="btnToCamera" onclick="goToCamera()">
-      カメラ起動 📷
-    </button>
-  </div>
-</div>
-
-<!-- ===== SCREEN 3: CAMERA ===== -->
-<div class="screen hidden" id="cameraScreen">
-  <video id="videoEl" autoplay playsinline muted></video>
-  <div id="charaLayer"></div>
-
-  <div id="sizeControl">
-    <span>🔍</span>
-    <input type="range" id="sizeSlider" min="60" max="300" value="140" oninput="updateSize()">
-    <span>サイズ</span>
+  <!-- SCREEN: POSITION -->
+  <div class="screen" id="posScreen">
+    <h2>どこに置く？</h2>
+    <p id="posNote">キャラが1体のとき：好きな場所を選べます</p>
+    <div class="pos-grid" id="posGrid">
+      <button class="pos-btn" data-pos="top-left"  onclick="selectPos(this)"><span class="pos-icon">↖️</span><span>左上</span></button>
+      <button class="pos-btn" data-pos="top-right" onclick="selectPos(this)"><span class="pos-icon">↗️</span><span>右上</span></button>
+      <button class="pos-btn" data-pos="left"      onclick="selectPos(this)"><span class="pos-icon">⬅️</span><span>左横</span></button>
+      <button class="pos-btn" data-pos="right"     onclick="selectPos(this)"><span class="pos-icon">➡️</span><span>右横</span></button>
+    </div>
+    <div style="flex:1"></div>
+    <div class="bottom-nav">
+      <button class="btn-back" onclick="showArScreen('selectScreen')">← 戻る</button>
+      <button class="btn-next" id="btnToCamera" onclick="goToCamera()" disabled>カメラ起動 📷</button>
+    </div>
   </div>
 
-  <div id="camControls">
-    <button class="btn-cam-back" onclick="stopCamera()">← 戻る</button>
-    <button class="btn-shutter" onclick="takePhoto()"></button>
-    <button class="btn-flip" onclick="flipCamera()">🔄 反転</button>
+  <!-- SCREEN: CAMERA -->
+  <div class="screen" id="cameraScreen" style="flex:1;position:relative;">
+    <video id="videoEl" autoplay playsinline muted></video>
+    <div id="charaLayer"></div>
+    <div id="sizeControl" class="hidden">
+      <span>🔍</span>
+      <input type="range" id="sizeSlider" min="60" max="320" value="150" oninput="updateSize()">
+      <span>サイズ</span>
+    </div>
+    <div id="camControls">
+      <button class="btn-cam-back" onclick="stopCamera()">← 戻る</button>
+      <button class="btn-shutter" onclick="takePhoto()"></button>
+      <button class="btn-flip" onclick="flipCamera()">🔄 反転</button>
+    </div>
+    <div id="flashEl"></div>
+    <div id="permError">
+      <p>📵 カメラへのアクセスが<br>許可されていません。<br>ブラウザの設定からカメラを許可してください。</p>
+      <button class="btn-small" onclick="document.getElementById('permError').classList.remove('show')">閉じる</button>
+    </div>
   </div>
 
-  <div id="flashEl"></div>
-
-  <div id="permError">
-    <p>📵 カメラへのアクセスが<br>許可されていません。<br>ブラウザの設定からカメラを許可してください。</p>
-    <button class="btn-small" onclick="document.getElementById('permError').classList.remove('show')">閉じる</button>
+  <!-- SCREEN: PREVIEW -->
+  <div class="screen" id="previewScreen">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:16px;">
+      <img id="previewImg" src="" alt="撮影した写真">
+    </div>
+    <div class="preview-actions">
+      <button class="btn-save" onclick="savePhoto()">💾 保存</button>
+      <button class="btn-retake" onclick="retakePhoto()">📷 撮り直す</button>
+    </div>
+    <div style="padding-bottom:20px"></div>
   </div>
-</div>
 
-<!-- ===== SCREEN 4: PREVIEW ===== -->
-<div class="screen hidden" id="previewScreen">
-  <img id="previewImg" src="" alt="撮影した写真">
-  <div class="preview-actions">
-    <button class="btn-save" onclick="savePhoto()">💾 保存</button>
-    <button class="btn-retake" onclick="retakePhoto()">📷 撮り直す</button>
+</div><!-- /arPage -->
+
+<!-- ===== INFO PAGE ===== -->
+<div class="tab-page" id="infoPage">
+
+  <div class="info-section">
+    <h3>使い方</h3>
+    <div class="info-box">
+      <ul>
+        <li>📱 <strong>スマートフォン・タブレット専用</strong>です（PCでは動作しません）</li>
+        <li>🦠 キャラを1体以上選んで「場所を選ぶ」へ進んでください</li>
+        <li>📍 <strong>1体の場合</strong>：配置場所を選択できます。カメラ画面でキャラを<strong>ドラッグして自由に移動</strong>でき、スライダーで<strong>サイズも調整</strong>できます</li>
+        <li>👥 <strong>複数の場合</strong>：場所・サイズは自動で決まります</li>
+        <li>📸 シャッターボタンで撮影 → プレビュー確認 → 保存</li>
+        <li>🔄 「反転」ボタンで前面カメラ↔背面カメラを切替できます</li>
+      </ul>
+    </div>
   </div>
-</div>
+
+  <div class="info-section">
+    <h3>🏠 ホームページ</h3>
+    <a class="link-card" href="https://www.omu.ac.jp/med/bacteriology/" target="_blank">
+      <span class="link-card-name">細菌学教室</span>
+      <span class="link-card-desc">大阪公立大学医学部 細菌学教室公式サイト。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://www.omu.ac.jp/med/iloha/" target="_blank">
+      <span class="link-card-name">ILOHA</span>
+      <span class="link-card-desc">Infection Lecture at OMU Hospital &amp; Affiliates。事前学習・用語集ほか。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="http://filgap.kenkyuukai.jp/special/index.asp?id=41772" target="_blank">
+      <span class="link-card-name">Fil-GAP</span>
+      <span class="link-card-desc">抗菌薬適正使用研修会（Fil-GAP）公式ページ。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://somekata.github.io/somekata/" target="_blank">
+      <span class="link-card-name">染方史郎の細菌楽教室</span>
+      <span class="link-card-desc">試験的に作成したページなのでコンテンツはあまり充実していませんが、お立ち寄りください。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+  </div>
+
+  <div class="info-section">
+    <h3>🎮 ゲーム関連</h3>
+    <a class="link-card" href="https://html5.plicy.net/GamePlay/188400" target="_blank">
+      <span class="link-card-name">中耳炎ゲーム</span>
+      <span class="link-card-desc">中耳炎ケースで学ぶ意思決定ゲーム。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://html5.plicy.net/GamePlay/188399" target="_blank">
+      <span class="link-card-name">菌血症ゲーム</span>
+      <span class="link-card-desc">菌血症の診断・治療思考を体験。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://html5.plicy.net/GamePlay/155481" target="_blank">
+      <span class="link-card-name">バイキンズウォー</span>
+      <span class="link-card-desc">バイキンズの世界で戦略的に学ぶ。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://html5.plicy.net/GamePlay/188389" target="_blank">
+      <span class="link-card-name">VSAMR</span>
+      <span class="link-card-desc">耐性菌との戦いでAS/DSの視点を鍛える。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://html5.plicy.net/GamePlay/188396" target="_blank">
+      <span class="link-card-name">抗菌薬ゲーム</span>
+      <span class="link-card-desc">症例ベースで抗菌薬選択を鍛える。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://html5.plicy.net/GamePlay/188392" target="_blank">
+      <span class="link-card-name">Virtual PCR</span>
+      <span class="link-card-desc">PCRの流れを仮想体験。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://html5.plicy.net/GamePlay/188681" target="_blank">
+      <span class="link-card-name">バイキンズバトル</span>
+      <span class="link-card-desc">バイキンズのバトルで学ぶ。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://html5.plicy.net/GamePlay/200325" target="_blank">
+      <span class="link-card-name">バイキンズゲット</span>
+      <span class="link-card-desc">収集しながら菌の特徴を覚える。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://html5.plicy.net/GamePlay/202257" target="_blank">
+      <span class="link-card-name">バイキンズポーカー</span>
+      <span class="link-card-desc">役を作りながら微生物の個性を整理。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://html5.plicy.net/GamePlay/194921" target="_blank">
+      <span class="link-card-name">バイキンズスロット</span>
+      <span class="link-card-desc">ライトに学ぶ AMR/疾患のキーワード。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://somekata.github.io/bactVR/index.html" target="_blank">
+      <span class="link-card-name">bactVRゲーム</span>
+      <span class="link-card-desc">簡易VRで感染対策を学ぶ。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://somekata.github.io/bactVR/PPE/index.html" target="_blank">
+      <span class="link-card-name">bactVR/PPEゲーム</span>
+      <span class="link-card-desc">ガウンテクニックをVRで学ぶ。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://plicy.net/User/81386" target="_blank">
+      <span class="link-card-name">Plicy Games</span>
+      <span class="link-card-desc">Plicyに「スニップ」として投稿しているゲームの一覧（入口）です。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://bact-attack-lab.base44.app/" target="_blank">
+      <span class="link-card-name">BactAttac</span>
+      <span class="link-card-desc">細菌を撃破するシューティングゲーム。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+  </div>
+
+  <div class="info-section">
+    <h3>💬 LINE公式アカウント</h3>
+    <a class="link-card" href="https://lin.ee/2KbLux8" target="_blank">
+      <span class="link-card-name">細菌学講座（LINE）</span>
+      <span class="link-card-desc">講座の最新情報・連絡。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://lin.ee/T0gHXxO" target="_blank">
+      <span class="link-card-name">ILOHA（LINE）</span>
+      <span class="link-card-desc">ILOHAの更新・イベント案内。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+    <a class="link-card" href="https://lin.ee/3RzYMzU" target="_blank">
+      <span class="link-card-name">Fil-GAP（LINE）</span>
+      <span class="link-card-desc">抗菌薬適正使用研修会の通知。</span>
+      <span class="link-card-open">開く →</span>
+    </a>
+  </div>
+
+  <div style="font-size:.65rem;color:var(--muted);text-align:center;padding:10px 20px 10px;line-height:1.7;">
+    本アプリはAI（Claude, Anthropic）を用いて作成されました。内容には誤りが含まれる可能性があります。<br>
+    医療上の判断には必ず公式の教科書・文献・専門家の指導を参照してください。<br>
+    二次利用・再配布は自己責任のもとで可能です。その際、本注記の保持を推奨します。
+  </div>
+
+</div><!-- /infoPage -->
 
 <canvas id="offscreen" style="display:none"></canvas>
 
 <script>
 // ===== DATA =====
-const CHARAS = [
-  { id:'chara1',  name:'ハイエンキューキン王',      url:'https://somekata.github.io/baikinscharacters/img/chara1.png'  },
-  { id:'chara2',  name:'インフルエンザキンXV世女王', url:'https://somekata.github.io/baikinscharacters/img/chara2.png'  },
-  { id:'chara3',  name:'マイコプラズマ姫',           url:'https://somekata.github.io/baikinscharacters/img/chara3.png'  },
-  { id:'chara4',  name:'レジオネラ爺や',             url:'https://somekata.github.io/baikinscharacters/img/chara4.png'  },
-  { id:'chara9',  name:'ビブリ男コレラ',             url:'https://somekata.github.io/baikinscharacters/img/chara9.png'  },
-  { id:'chara6',  name:'ベロダシ',                   url:'https://somekata.github.io/baikinscharacters/img/chara6.png'  },
-  { id:'chara11', name:'リョクノーキン',             url:'https://somekata.github.io/baikinscharacters/img/chara11.png' },
+const CHARAS=[
+  {id:'chara1', name:'ハイエンキューキン王',      url:'https://somekata.github.io/baikinscharacters/img/chara1.png'},
+  {id:'chara2', name:'インフルエンザキンXV世女王', url:'https://somekata.github.io/baikinscharacters/img/chara2.png'},
+  {id:'chara3', name:'マイコプラズマ姫',           url:'https://somekata.github.io/baikinscharacters/img/chara3.png'},
+  {id:'chara4', name:'レジオネラ爺や',             url:'https://somekata.github.io/baikinscharacters/img/chara4.png'},
+  {id:'chara9', name:'ビブリ男コレラ',             url:'https://somekata.github.io/baikinscharacters/img/chara9.png'},
+  {id:'chara6', name:'ベロダシ',                   url:'https://somekata.github.io/baikinscharacters/img/chara6.png'},
+  {id:'chara11',name:'リョクノーキン',             url:'https://somekata.github.io/baikinscharacters/img/chara11.png'},
 ];
 
 // ===== STATE =====
-let selected = new Set();
-let chosenPos = 'right';
-let stream = null;
-let facingMode = 'environment';
-let charaSize = 140;
-let capturedBlob = null;
-let loadedImages = {};
+let selected=new Set(), chosenPos='right', stream=null, facingMode='environment';
+let charaSize=150, capturedBlob=null;
+// single chara drag state
+let dragEl=null, dragOffX=0, dragOffY=0, charaX=0, charaY=0;
 
 // ===== STARS =====
 (function(){
-  const s = document.getElementById('stars');
+  const s=document.getElementById('stars');
   for(let i=0;i<60;i++){
-    const d = document.createElement('div');
-    d.className='star';
-    d.style.left = Math.random()*100+'%';
-    d.style.top  = Math.random()*100+'%';
-    d.style.setProperty('--d',  (2+Math.random()*4)+'s');
-    d.style.setProperty('--delay', (Math.random()*5)+'s');
-    d.style.setProperty('--op', (0.4+Math.random()*0.6).toFixed(2));
+    const d=document.createElement('div'); d.className='star';
+    d.style.left=Math.random()*100+'%'; d.style.top=Math.random()*100+'%';
+    d.style.setProperty('--d',(2+Math.random()*4)+'s');
+    d.style.setProperty('--delay',(Math.random()*5)+'s');
+    d.style.setProperty('--op',(0.4+Math.random()*0.6).toFixed(2));
     s.appendChild(d);
   }
 })();
 
-// ===== BUILD CHARA GRID =====
-(function(){
-  const grid = document.getElementById('charaGrid');
-  CHARAS.forEach(c => {
-    const card = document.createElement('div');
-    card.className = 'chara-card';
-    card.dataset.id = c.id;
-    card.innerHTML = `
-      <img src="${c.url}" alt="${c.name}" loading="lazy">
-      <div class="chara-name">${c.name}</div>
-      <div class="check-badge">✓</div>
-    `;
-    card.onclick = () => toggleChara(c.id, card);
-    grid.appendChild(card);
+// ===== TABS =====
+function switchTab(pageId,btn){
+  document.querySelectorAll('.tab-page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(pageId).classList.add('active');
+  btn.classList.add('active');
+}
 
-    // preload
-    const img = new Image();
-    img.src = c.url;
-    img.onload = () => { loadedImages[c.id] = img; };
-    loadedImages[c.id] = img;
+// ===== AR SCREENS =====
+function showArScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ===== CHARA GRID =====
+(function(){
+  const grid=document.getElementById('charaGrid');
+  CHARAS.forEach(c=>{
+    const card=document.createElement('div');
+    card.className='chara-card'; card.dataset.id=c.id;
+    card.innerHTML=`<img src="${c.url}" alt="${c.name}" loading="lazy">
+      <div class="chara-name">${c.name}</div>
+      <div class="check-badge">✓</div>`;
+    card.onclick=()=>toggleChara(c.id,card);
+    grid.appendChild(card);
   });
 })();
 
-function toggleChara(id, card) {
-  if(selected.has(id)) { selected.delete(id); card.classList.remove('selected'); }
-  else                 { selected.add(id);    card.classList.add('selected');    }
-  document.getElementById('btnToPos').disabled = selected.size === 0;
+function toggleChara(id,card){
+  if(selected.has(id)){selected.delete(id);card.classList.remove('selected');}
+  else{selected.add(id);card.classList.add('selected');}
+  document.getElementById('btnToPos').disabled=selected.size===0;
 }
-function selectAll()  { document.querySelectorAll('.chara-card').forEach(c => { selected.add(c.dataset.id); c.classList.add('selected'); }); document.getElementById('btnToPos').disabled=false; }
-function selectNone() { document.querySelectorAll('.chara-card').forEach(c => { c.classList.remove('selected'); }); selected.clear(); document.getElementById('btnToPos').disabled=true; }
+function selectAll(){document.querySelectorAll('.chara-card').forEach(c=>{selected.add(c.dataset.id);c.classList.add('selected');});document.getElementById('btnToPos').disabled=false;}
+function selectNone(){document.querySelectorAll('.chara-card').forEach(c=>{c.classList.remove('selected');});selected.clear();document.getElementById('btnToPos').disabled=true;}
 
 // ===== NAVIGATE =====
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-  document.getElementById(id).classList.remove('hidden');
-}
-function goBack(to) { showScreen(to); }
-
-function goToPos() {
-  if(selected.size === 0) return;
-  const note = document.getElementById('posNote');
-  const multi = selected.size > 1;
-  if(multi) {
-    note.textContent = '複数キャラは自動で配置されます';
-    document.getElementById('btnToCamera').disabled = false;
-    // auto-select dummy
-    chosenPos = 'auto';
-  } else {
-    note.textContent = 'キャラが1体のとき：好きな場所を選べます';
-    chosenPos = null;
-    document.getElementById('btnToCamera').disabled = true;
-  }
-  // reset pos buttons
-  document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('selected'));
-  if(multi) {
-    document.querySelectorAll('.pos-btn').forEach(b => { b.style.opacity='0.4'; b.style.pointerEvents='none'; });
-  } else {
-    document.querySelectorAll('.pos-btn').forEach(b => { b.style.opacity=''; b.style.pointerEvents=''; });
-  }
-  showScreen('posScreen');
+function goToPos(){
+  if(selected.size===0)return;
+  const multi=selected.size>1;
+  document.getElementById('posNote').textContent=multi?'複数キャラは自動で配置されます':'好きな場所を選んでください';
+  document.querySelectorAll('.pos-btn').forEach(b=>{
+    b.style.opacity=multi?'0.4':'';
+    b.style.pointerEvents=multi?'none':'';
+    b.classList.remove('selected');
+  });
+  if(multi){chosenPos='auto';document.getElementById('btnToCamera').disabled=false;}
+  else{chosenPos=null;document.getElementById('btnToCamera').disabled=true;}
+  showArScreen('posScreen');
 }
 
-function selectPos(btn) {
-  if(selected.size > 1) return;
-  document.querySelectorAll('.pos-btn').forEach(b => b.classList.remove('selected'));
+function selectPos(btn){
+  if(selected.size>1)return;
+  document.querySelectorAll('.pos-btn').forEach(b=>b.classList.remove('selected'));
   btn.classList.add('selected');
-  chosenPos = btn.dataset.pos;
-  document.getElementById('btnToCamera').disabled = false;
+  chosenPos=btn.dataset.pos;
+  document.getElementById('btnToCamera').disabled=false;
 }
 
-async function goToCamera() {
-  showScreen('cameraScreen');
-  document.getElementById('sizeControl').classList.toggle('hidden', selected.size > 1);
-  charaSize = parseInt(document.getElementById('sizeSlider').value);
+async function goToCamera(){
+  showArScreen('cameraScreen');
+  const single=selected.size===1;
+  document.getElementById('sizeControl').classList.toggle('hidden',!single);
+  charaSize=parseInt(document.getElementById('sizeSlider').value);
   await startCamera();
   renderCharas();
+  if(single){
+    // show drag hint
+    const old=document.getElementById('dragHint');
+    if(old)old.remove();
+    const hint=document.createElement('div');
+    hint.id='dragHint'; hint.textContent='👆 キャラをドラッグして移動できます';
+    document.getElementById('cameraScreen').appendChild(hint);
+  }
 }
 
 // ===== CAMERA =====
-async function startCamera() {
-  try {
-    if(stream) stream.getTracks().forEach(t=>t.stop());
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode, width:{ideal:1280}, height:{ideal:720} },
-      audio: false
-    });
-    document.getElementById('videoEl').srcObject = stream;
-  } catch(e) {
-    document.getElementById('permError').classList.add('show');
-  }
+async function startCamera(){
+  try{
+    if(stream)stream.getTracks().forEach(t=>t.stop());
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode,width:{ideal:1280},height:{ideal:720}},audio:false});
+    document.getElementById('videoEl').srcObject=stream;
+  }catch(e){document.getElementById('permError').classList.add('show');}
 }
-
-async function flipCamera() {
-  facingMode = facingMode === 'environment' ? 'user' : 'environment';
-  await startCamera();
-}
-
-function stopCamera() {
-  if(stream) stream.getTracks().forEach(t=>t.stop());
-  stream = null;
-  showScreen('posScreen');
+async function flipCamera(){facingMode=facingMode==='environment'?'user':'environment';await startCamera();}
+function stopCamera(){
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  stream=null;
+  showArScreen('posScreen');
 }
 
 // ===== RENDER CHARAS =====
-function renderCharas() {
-  const layer = document.getElementById('charaLayer');
-  layer.innerHTML = '';
-  const ids = [...selected];
-  const n = ids.length;
-  if(n === 0) return;
+const POS_MAP={
+  'right':        (vw,vh,sz)=>({x:vw-sz-8,     y:(vh-sz)/2}),
+  'left':         (vw,vh,sz)=>({x:8,            y:(vh-sz)/2}),
+  'top-right':    (vw,vh,sz)=>({x:vw-sz-8,     y:56}),
+  'top-left':     (vw,vh,sz)=>({x:8,            y:56}),
+  'bottom-right': (vw,vh,sz)=>({x:vw-sz-8,     y:vh-sz-85}),
+  'bottom-left':  (vw,vh,sz)=>({x:8,            y:vh-sz-85}),
+  'bottom-center':(vw,vh,sz)=>({x:(vw-sz)/2,   y:vh-sz-85}),
+  'top-center':   (vw,vh,sz)=>({x:(vw-sz)/2,   y:56}),
+};
+const AUTO_POS=['bottom-left','bottom-right','top-left','top-right','left','right','bottom-center','top-center'];
 
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
+function renderCharas(){
+  const layer=document.getElementById('charaLayer');
+  layer.innerHTML='';
+  const ids=[...selected]; const n=ids.length;
+  if(n===0)return;
+  const vw=window.innerWidth, vh=window.innerHeight;
 
-  if(n === 1) {
-    placeChara(layer, ids[0], chosenPos, vw, vh, charaSize);
+  if(n===1){
+    const pos=POS_MAP[chosenPos]||POS_MAP['right'];
+    const p=pos(vw,vh,charaSize);
+    charaX=p.x; charaY=p.y;
+    const el=makeCharaEl(ids[0],charaSize,charaX,charaY,true);
+    layer.appendChild(el);
+    setupDrag(el);
   } else {
-    const positions = autoPositions(n);
-    ids.forEach((id, i) => {
-      const sz = Math.min(vw, vh) * 0.28;
-      placeChara(layer, id, positions[i], vw, vh, sz);
+    ids.forEach((id,i)=>{
+      const sz=Math.min(vw,vh)*0.27;
+      const posKey=AUTO_POS[i]||'right';
+      const p=(POS_MAP[posKey]||POS_MAP['right'])(vw,vh,sz);
+      const el=makeCharaEl(id,sz,p.x,p.y,false);
+      layer.appendChild(el);
     });
   }
 }
 
-function autoPositions(n) {
-  const slots = ['bottom-left','bottom-right','top-left','top-right','left','right','bottom-center','top-center'];
-  return slots.slice(0, n);
-}
-
-function placeChara(layer, id, pos, vw, vh, sz) {
-  const chara = CHARAS.find(c=>c.id===id);
-  if(!chara) return;
-
-  const el = document.createElement('div');
-  el.className = 'ar-chara';
-  el.style.width  = sz+'px';
-  el.style.height = sz+'px';
-
-  const img = document.createElement('img');
-  img.src = chara.url;
-  img.alt = chara.name;
-  img.crossOrigin = 'anonymous';
+function makeCharaEl(id,sz,x,y,draggable){
+  const chara=CHARAS.find(c=>c.id===id);
+  const el=document.createElement('div');
+  el.className='ar-chara'+(draggable?' draggable':'');
+  el.style.width=sz+'px'; el.style.height=sz+'px';
+  el.style.left=x+'px'; el.style.top=y+'px';
+  el.dataset.id=id;
+  const img=document.createElement('img');
+  img.src=chara.url; img.alt=chara.name; img.crossOrigin='anonymous';
   el.appendChild(img);
-
-  // Position mapping
-  const pad = 8;
-  const posMap = {
-    'right':         { left: vw - sz - pad,     top:  (vh - sz) / 2 },
-    'left':          { left: pad,                top:  (vh - sz) / 2 },
-    'top-right':     { left: vw - sz - pad,     top:  pad + 60 },
-    'top-left':      { left: pad,                top:  pad + 60 },
-    'bottom-right':  { left: vw - sz - pad,     top:  vh - sz - 90 },
-    'bottom-left':   { left: pad,                top:  vh - sz - 90 },
-    'bottom-center': { left: (vw - sz) / 2,     top:  vh - sz - 90 },
-    'top-center':    { left: (vw - sz) / 2,     top:  pad + 60 },
-  };
-
-  const p = posMap[pos] || posMap['right'];
-  el.style.left = p.left + 'px';
-  el.style.top  = p.top  + 'px';
-
-  layer.appendChild(el);
+  return el;
 }
 
-function updateSize() {
-  charaSize = parseInt(document.getElementById('sizeSlider').value);
-  renderCharas();
+function updateSize(){
+  charaSize=parseInt(document.getElementById('sizeSlider').value);
+  const el=document.querySelector('.ar-chara.draggable');
+  if(el){
+    // keep center position when resizing
+    const cx=charaX+parseFloat(el.style.width)/2;
+    const cy=charaY+parseFloat(el.style.height)/2;
+    el.style.width=charaSize+'px'; el.style.height=charaSize+'px';
+    charaX=cx-charaSize/2; charaY=cy-charaSize/2;
+    el.style.left=charaX+'px'; el.style.top=charaY+'px';
+  }
+}
+
+// ===== DRAG =====
+function setupDrag(el){
+  el.addEventListener('touchstart',onDragStart,{passive:false});
+  el.addEventListener('mousedown',onDragStart);
+}
+function onDragStart(e){
+  e.preventDefault();
+  dragEl=e.currentTarget;
+  const touch=e.touches?e.touches[0]:e;
+  dragOffX=touch.clientX-parseFloat(dragEl.style.left);
+  dragOffY=touch.clientY-parseFloat(dragEl.style.top);
+  document.addEventListener('touchmove',onDragMove,{passive:false});
+  document.addEventListener('mousemove',onDragMove);
+  document.addEventListener('touchend',onDragEnd);
+  document.addEventListener('mouseup',onDragEnd);
+}
+function onDragMove(e){
+  if(!dragEl)return;
+  e.preventDefault();
+  const touch=e.touches?e.touches[0]:e;
+  const vw=window.innerWidth, vh=window.innerHeight;
+  const sz=parseFloat(dragEl.style.width);
+  charaX=Math.max(0,Math.min(vw-sz, touch.clientX-dragOffX));
+  charaY=Math.max(0,Math.min(vh-sz, touch.clientY-dragOffY));
+  dragEl.style.left=charaX+'px';
+  dragEl.style.top=charaY+'px';
+}
+function onDragEnd(){
+  dragEl=null;
+  document.removeEventListener('touchmove',onDragMove);
+  document.removeEventListener('mousemove',onDragMove);
+  document.removeEventListener('touchend',onDragEnd);
+  document.removeEventListener('mouseup',onDragEnd);
 }
 
 // ===== PHOTO =====
-async function takePhoto() {
-  const video  = document.getElementById('videoEl');
-  const canvas = document.getElementById('offscreen');
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-
-  // match device pixel ratio for crisp output
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width  = vw * dpr;
-  canvas.height = vh * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
+async function takePhoto(){
+  const video=document.getElementById('videoEl');
+  const canvas=document.getElementById('offscreen');
+  const vw=window.innerWidth, vh=window.innerHeight;
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=vw*dpr; canvas.height=vh*dpr;
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
 
   // draw video
-  const vNatW = video.videoWidth  || vw;
-  const vNatH = video.videoHeight || vh;
-  const scale = Math.max(vw/vNatW, vh/vNatH);
-  const dw = vNatW * scale;
-  const dh = vNatH * scale;
-  const dx = (vw - dw) / 2;
-  const dy = (vh - dh) / 2;
-  ctx.drawImage(video, dx, dy, dw, dh);
+  const vNatW=video.videoWidth||vw, vNatH=video.videoHeight||vh;
+  const scale=Math.max(vw/vNatW,vh/vNatH);
+  const dw=vNatW*scale, dh=vNatH*scale;
+  ctx.drawImage(video,(vw-dw)/2,(vh-dh)/2,dw,dh);
 
-  // draw charas
-  const ids = [...selected];
-  const n   = ids.length;
-  const positions = n === 1 ? [chosenPos] : autoPositions(n);
-
-  for(let i=0;i<n;i++){
-    const id  = ids[i];
-    const pos = positions[i];
-    const sz  = n === 1 ? charaSize : Math.min(vw,vh)*0.28;
-    const chara = CHARAS.find(c=>c.id===id);
-    if(!chara) continue;
-
-    const posMap = {
-      'right':         { left: vw - sz - 8,  top: (vh-sz)/2 },
-      'left':          { left: 8,             top: (vh-sz)/2 },
-      'top-right':     { left: vw - sz - 8,  top: 68 },
-      'top-left':      { left: 8,             top: 68 },
-      'bottom-right':  { left: vw - sz - 8,  top: vh-sz-90 },
-      'bottom-left':   { left: 8,             top: vh-sz-90 },
-      'bottom-center': { left: (vw-sz)/2,    top: vh-sz-90 },
-      'top-center':    { left: (vw-sz)/2,    top: 68 },
-    };
-    const p = posMap[pos] || posMap['right'];
-
-    await new Promise(resolve => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        ctx.drawImage(img, p.left, p.top, sz, sz);
-        resolve();
-      };
-      img.onerror = resolve;
-      img.src = chara.url + '?v=' + Date.now();
+  // draw charas from DOM positions
+  const els=document.querySelectorAll('.ar-chara');
+  for(const el of els){
+    const x=parseFloat(el.style.left), y=parseFloat(el.style.top);
+    const sz=parseFloat(el.style.width);
+    const id=el.dataset.id;
+    const chara=CHARAS.find(c=>c.id===id);
+    if(!chara)continue;
+    await new Promise(resolve=>{
+      const img=new Image(); img.crossOrigin='anonymous';
+      img.onload=()=>{ctx.drawImage(img,x,y,sz,sz);resolve();};
+      img.onerror=resolve;
+      img.src=chara.url+'?t='+Date.now();
     });
   }
 
-  // flash
-  const flash = document.getElementById('flashEl');
+  const flash=document.getElementById('flashEl');
   flash.classList.add('flash');
-  setTimeout(() => flash.classList.remove('flash'), 150);
+  setTimeout(()=>flash.classList.remove('flash'),150);
 
-  // show preview
-  canvas.toBlob(blob => {
-    capturedBlob = blob;
-    const url = URL.createObjectURL(blob);
-    document.getElementById('previewImg').src = url;
-    setTimeout(() => showScreen('previewScreen'), 200);
-  }, 'image/jpeg', 0.95);
+  canvas.toBlob(blob=>{
+    capturedBlob=blob;
+    document.getElementById('previewImg').src=URL.createObjectURL(blob);
+    setTimeout(()=>showArScreen('previewScreen'),200);
+  },'image/jpeg',0.95);
 }
 
-function savePhoto() {
-  if(!capturedBlob) return;
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(capturedBlob);
-  a.download = 'baikins_' + Date.now() + '.jpg';
+function savePhoto(){
+  if(!capturedBlob)return;
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(capturedBlob);
+  a.download='baikins_'+Date.now()+'.jpg';
   a.click();
 }
 
-function retakePhoto() {
-  showScreen('cameraScreen');
-  if(!stream) startCamera();
+function retakePhoto(){
+  showArScreen('cameraScreen');
+  if(!stream)startCamera();
   renderCharas();
 }
 
-// re-render on resize
-window.addEventListener('resize', () => {
-  if(!document.getElementById('cameraScreen').classList.contains('hidden')) {
-    renderCharas();
-  }
+window.addEventListener('resize',()=>{
+  if(document.getElementById('cameraScreen').classList.contains('active'))renderCharas();
 });
 </script>
-
-<footer style="display:none">
-<!-- 
-本アプリは AI（Claude, Anthropic）を用いて作成されました。
-内容には誤りが含まれる可能性があります。
-二次利用・再配布は自己責任のもとで可能です。その際、本注記の保持を推奨します。
--->
-</footer>
 </body>
 </html>
