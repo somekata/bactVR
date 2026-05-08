@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>WHO 5 Moments VR</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; }
+
+:root {
+  --tab-h: 54px;
+  --hdr-h: 50px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --accent: #0066ff;
+  --border: #dde3ea;
+  --surface: #fff;
+  --muted: #94a3b8;
+  --text: #1e293b;
+}
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: #f0f4f8;
+  color: var(--text);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── HEADER ── */
+header {
+  height: var(--hdr-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  z-index: 20;
+  position: relative;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.logo { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; color: var(--accent); }
+.hdr-right { display: flex; gap: 8px; align-items: center; }
+.pill { border-radius: 999px; padding: 4px 11px; font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; }
+.pill-found { background: #dcfce7; border: 1px solid #86efac; color: #166534; }
+.pill-score { background: #fef9c3; border: 1px solid #fde047; color: #854d0e; }
+
+/* ── CONTENT ── */
+.content-area { flex: 1; overflow: hidden; position: relative; min-height: 0; }
+.tab-panel { position: absolute; inset: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; display: none; flex-direction: column; }
+.tab-panel.active { display: flex; }
+
+/* ── BOTTOM TABS ── */
+.bottom-tabs {
+  height: calc(var(--tab-h) + var(--safe-b));
+  padding-bottom: var(--safe-b);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-shrink: 0;
+  z-index: 20;
+  box-shadow: 0 -2px 8px rgba(0,0,0,.05);
+}
+.tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; background: none; border: none; cursor: pointer; color: var(--muted); transition: color .18s; padding: 6px 4px 0; }
+.tab-btn.active { color: var(--accent); }
+.tab-btn .ti { font-size: 21px; line-height: 1; }
+.tab-btn .tl { font-size: 10px; font-weight: 700; }
+
+/* ════════════════════════════════════
+   VR TAB — full-size canvas
+════════════════════════════════════ */
+#tabVR { overflow: hidden; background: #c8dff0; }
+
+#vrCanvas {
+  position: absolute;
+  top: 0; left: 0;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+#vrCanvas:active { cursor: grabbing; }
+
+/* HUD */
+.vr-hud { position: absolute; inset: 0; pointer-events: none; z-index: 10; }
+
+.vr-top {
+  position: absolute; top: 0; left: 0; right: 0;
+  padding: 10px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(to bottom, rgba(0,0,0,.45), transparent);
+}
+.vr-title { font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+.vr-found { font-family: 'Space Mono', monospace; font-size: 12px; color: rgba(255,255,255,.8); }
+.vr-found span { color: #ffd700; font-weight: 700; }
+
+.dn-btn {
+  pointer-events: auto;
+  position: absolute; top: 10px; right: 14px;
+  background: rgba(255,255,255,.25);
+  border: 1px solid rgba(255,255,255,.4);
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: 12px; font-weight: 700; color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: background .2s;
+}
+.dn-btn:hover { background: rgba(255,255,255,.35); }
+
+/* keyboard hint (PC) */
+.kb-hint {
+  position: absolute; bottom: 42px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.25);
+  border-radius: 20px; padding: 7px 16px;
+  font-size: 11px; color: rgba(255,255,255,.8);
+  white-space: nowrap; pointer-events: none;
+  animation: hintFade 4s ease forwards;
+}
+@keyframes hintFade { 0%{opacity:0} 15%{opacity:1} 65%{opacity:1} 100%{opacity:0} }
+
+.gyro-badge {
+  position: absolute; top: 44px; left: 14px;
+  background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.2);
+  border-radius: 999px; padding: 3px 9px;
+  font-size: 10px; color: rgba(255,255,255,.6);
+}
+.gyro-badge.on { border-color: rgba(0,255,150,.5); color: rgba(0,255,150,.9); }
+
+.prog-dots {
+  position: absolute; bottom: 12px; left: 50%;
+  transform: translateX(-50%);
+  display: flex; gap: 8px; pointer-events: none;
+}
+.pdot { width: 11px; height: 11px; border-radius: 50%; background: rgba(255,255,255,.25); border: 1.5px solid rgba(255,255,255,.4); transition: all .3s; }
+.pdot.done { background: #4ade80; border-color: #4ade80; box-shadow: 0 0 8px rgba(74,222,128,.7); }
+
+/* ── POPUP ── */
+#popup {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%,-50%) scale(.85);
+  width: min(340px, 90vw);
+  background: rgba(255,255,255,.97);
+  border: 1.5px solid rgba(0,102,255,.3);
+  border-radius: 20px; padding: 20px 18px 16px;
+  pointer-events: auto; z-index: 50; display: none;
+  box-shadow: 0 20px 60px rgba(0,0,0,.2);
+  color: #1e293b;
+}
+#popup.show { display: block; animation: popIn .3s cubic-bezier(.175,.885,.32,1.275) forwards; }
+@keyframes popIn { from{transform:translate(-50%,-50%) scale(.7);opacity:0} to{transform:translate(-50%,-50%) scale(1);opacity:1} }
+.pop-num { font-family: 'Space Mono', monospace; font-size: 10px; color: #94a3b8; letter-spacing: 2px; margin-bottom: 4px; }
+.pop-icon { font-size: 36px; text-align: center; margin-bottom: 8px; }
+.pop-title { font-size: 16px; font-weight: 900; margin-bottom: 8px; line-height: 1.3; }
+.pop-desc { font-size: 12px; color: #475569; line-height: 1.7; margin-bottom: 10px; }
+.pop-why { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 9px 12px; font-size: 12px; color: #1d4ed8; line-height: 1.6; margin-bottom: 12px; }
+.pop-btn { width: 100%; padding: 13px; background: #0066ff; color: #fff; border: none; border-radius: 12px; font-family: 'Noto Sans JP', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: background .18s; }
+.pop-btn:hover { background: #0050c4; }
+.pop-close { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; padding: 4px; line-height: 1; }
+
+/* ── COMPLETION ── */
+#vrCompletion {
+  position: absolute; inset: 0;
+  background: rgba(240,244,248,.95);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px 20px; z-index: 80; pointer-events: auto;
+  overflow-y: auto;
+}
+#vrCompletion.show { display: flex; }
+.comp-em { font-size: 56px; margin-bottom: 10px; animation: emBounce .6s cubic-bezier(.175,.885,.32,1.275); }
+@keyframes emBounce { 0%{transform:scale(0) rotate(-12deg)} 65%{transform:scale(1.12) rotate(3deg)} 100%{transform:scale(1) rotate(0)} }
+.comp-title { font-size: 20px; font-weight: 900; color: #0066ff; margin-bottom: 4px; text-align: center; }
+.comp-sub { font-size: 12px; color: #94a3b8; margin-bottom: 18px; text-align: center; }
+.mom-sum { width: 100%; max-width: 340px; display: flex; flex-direction: column; gap: 7px; margin-bottom: 20px; }
+.ms-row { background: #fff; border: 1px solid #dde3ea; border-radius: 11px; padding: 9px 13px; display: flex; align-items: center; gap: 10px; }
+.ms-n { font-family: 'Space Mono', monospace; font-size: 10px; background: #e8f0ff; color: #0066ff; border-radius: 5px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+.ms-ic { font-size: 18px; flex-shrink: 0; }
+.ms-nm { font-size: 12px; font-weight: 700; flex: 1; }
+.ms-ck { font-size: 15px; }
+.btn-restart { width: 100%; max-width: 340px; padding: 14px; background: #0066ff; color: #fff; border: none; border-radius: 13px; font-family: 'Noto Sans JP', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 8px; transition: background .2s; }
+.btn-restart:hover { background: #0050c4; }
+
+/* ── INTRO ── */
+#vrIntro {
+  position: absolute; inset: 0;
+  background: rgba(248,250,252,.97);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px 20px; z-index: 90; pointer-events: auto;
+  overflow-y: auto;
+}
+.intr-badge { background: #0066ff; border-radius: 999px; padding: 4px 14px; font-size: 11px; font-weight: 700; color: #fff; letter-spacing: 1.5px; margin-bottom: 12px; }
+.intr-title { font-size: 22px; font-weight: 900; text-align: center; margin-bottom: 4px; }
+.intr-sub { font-size: 12px; color: #94a3b8; text-align: center; margin-bottom: 16px; }
+.intr-desc { background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; max-width: 340px; width: 100%; font-size: 12px; color: #1e40af; line-height: 1.7; text-align: center; }
+.intr-list { width: 100%; max-width: 340px; margin-bottom: 20px; }
+.il-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #dde3ea; font-size: 12px; color: #334155; }
+.il-item:last-child { border-bottom: none; }
+.il-n { font-family: 'Space Mono', monospace; font-size: 10px; background: #0066ff; color: #fff; border-radius: 5px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+.btn-start { width: 100%; max-width: 340px; padding: 15px; background: #0066ff; color: #fff; border: none; border-radius: 13px; font-family: 'Noto Sans JP', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; margin-bottom: 10px; transition: background .2s; }
+.btn-start:hover { background: #0050c4; }
+.intr-note { font-size: 10px; color: #94a3b8; text-align: center; line-height: 1.6; max-width: 300px; }
+
+/* ════════════════════════════════════
+   GUIDE & LINKS TABS
+════════════════════════════════════ */
+.tab-scroll { padding: 20px 16px 32px; max-width: 520px; margin: 0 auto; width: 100%; }
+.gs { margin-bottom: 26px; }
+.gs h2 { font-size: 15px; font-weight: 900; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #e8f0ff; display: flex; align-items: center; gap: 7px; }
+.gs p { font-size: 13px; line-height: 1.75; color: #334155; margin-bottom: 8px; }
+
+.mom-card { background: #fff; border: 1.5px solid #dde3ea; border-radius: 16px; padding: 14px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.04); }
+.mc-head { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #0066ff; margin-bottom: 10px; }
+.mc-step { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid #dde3ea; }
+.mc-step:last-child { border-bottom: none; }
+.mc-n { font-family: 'Space Mono', monospace; font-size: 10px; background: #0066ff; color: #fff; border-radius: 5px; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+.mc-ic { font-size: 18px; flex-shrink: 0; }
+.mc-nm { font-size: 13px; font-weight: 700; }
+.mc-wh { font-size: 11px; color: #94a3b8; }
+
+.edu-box { background: #fff; border: 1.5px solid #dde3ea; border-radius: 14px; padding: 14px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.04); }
+.edu-tag { display: inline-block; background: #e8f0ff; color: #0066ff; border-radius: 999px; padding: 2px 9px; font-size: 10px; font-weight: 700; margin-bottom: 6px; }
+.edu-box h3 { font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+.edu-box p { font-size: 12px; color: #475569; line-height: 1.7; }
+
+.lk-card { background: #fff; border: 1.5px solid #dde3ea; border-radius: 16px; padding: 15px; margin-bottom: 11px; box-shadow: 0 2px 6px rgba(0,0,0,.04); display: block; text-decoration: none; color: inherit; transition: border-color .18s, box-shadow .18s; }
+.lk-card:hover { border-color: #0066ff; box-shadow: 0 5px 18px rgba(0,102,255,.1); }
+.lk-top { display: flex; align-items: flex-start; gap: 12px; }
+.lk-icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+.lk-title { font-size: 14px; font-weight: 700; color: #0066ff; margin-bottom: 3px; line-height: 1.4; }
+.lk-org { font-size: 11px; color: #94a3b8; margin-bottom: 4px; }
+.lk-desc { font-size: 12px; color: #475569; line-height: 1.6; }
+.lk-note { margin-top: 9px; padding: 7px 11px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 9px; font-size: 11px; color: #78350f; line-height: 1.5; }
+.lk-url { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 11px; color: #0066ff; font-family: 'Space Mono', monospace; }
+.info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 13px 15px; font-size: 12px; color: #1e40af; line-height: 1.65; margin-top: 6px; }
+.footer-note { padding: 16px; font-size: 10px; color: #94a3b8; line-height: 1.7; text-align: center; border-top: 1px solid #dde3ea; margin-top: 8px; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: calc(var(--tab-h) + var(--safe-b) + 12px);
+  left: 50%; transform: translateX(-50%) translateY(16px);
+  background: #059669; color: #fff;
+  border-radius: 14px; padding: 11px 20px;
+  font-size: 13px; font-weight: 700;
+  opacity: 0; pointer-events: none;
+  transition: all .26s ease;
+  white-space: nowrap; z-index: 999;
+  max-width: 88vw; text-align: center;
+  box-shadow: 0 8px 28px rgba(0,0,0,.18);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🏥 WHO 5 MOMENTS</div>
+  <div class="hdr-right">
+    <div class="pill pill-found">🖐 <span id="hdrFound">0</span>/5</div>
+    <div class="pill pill-score">⭐ <span id="hdrScore">0</span></div>
+  </div>
+</header>
+
+<div class="content-area">
+
+  <!-- ═══ VR TAB ═══ -->
+  <div class="tab-panel active" id="tabVR">
+    <canvas id="vrCanvas"></canvas>
+
+    <div class="vr-hud">
+      <div class="vr-top">
+        <div class="vr-title">5 MOMENTS VR</div>
+        <div class="vr-found">発見: <span id="vrFound">0</span>/5</div>
+      </div>
+      <button class="dn-btn" id="dnBtn" onclick="toggleDN()">☀️ 昼</button>
+      <div class="gyro-badge" id="gyroBadge">📱 ジャイロ待機</div>
+      <div class="prog-dots" id="progDots"></div>
+    </div>
+
+    <!-- Popup -->
+    <div id="popup">
+      <button class="pop-close" onclick="closePopup()">✕</button>
+      <div class="pop-num" id="popNum">MOMENT 1 / 5</div>
+      <div class="pop-icon" id="popIcon"></div>
+      <div class="pop-title" id="popTitle"></div>
+      <div class="pop-desc" id="popDesc"></div>
+      <div class="pop-why" id="popWhy"></div>
+      <button class="pop-btn" onclick="confirmMoment()">🧴 手指消毒する</button>
+    </div>
+
+    <!-- Completion -->
+    <div id="vrCompletion">
+      <div class="comp-em">🏆</div>
+      <div class="comp-title">5モーメント制覇！</div>
+      <div class="comp-sub">すべての手指衛生タイミングを学習しました</div>
+      <div class="mom-sum" id="momSum"></div>
+      <button class="btn-restart" onclick="restartGame()">🔄 もう一度挑戦する</button>
+      <div style="font-size:10px;color:#94a3b8;text-align:center;line-height:1.6;max-width:280px;margin-top:4px;">
+        本テキストはAI（Claude, Anthropic）を用いて作成されました。医療上の判断には必ず公式文献・専門家の指導を参照してください。
+      </div>
+    </div>
+
+    <!-- Intro -->
+    <div id="vrIntro">
+      <div class="intr-badge">WHO HAND HYGIENE</div>
+      <div class="intr-title">WHO 5 Moments VR</div>
+      <div class="intr-sub">病室を360°探索して5つのタイミングを発見しよう</div>
+      <div class="intr-desc">
+        病室を見渡すと、手指衛生が必要な場面が<strong>光って</strong>います。<br>
+        そこをタップ（またはクリック）して「🧴 手指消毒」しましょう！
+      </div>
+      <div class="intr-list">
+        <div class="il-item"><div class="il-n">1</div>患者に触れる前</div>
+        <div class="il-item"><div class="il-n">2</div>清潔/無菌操作の前</div>
+        <div class="il-item"><div class="il-n">3</div>体液に暴露された後</div>
+        <div class="il-item"><div class="il-n">4</div>患者に触れた後</div>
+        <div class="il-item"><div class="il-n">5</div>患者周辺環境に触れた後</div>
+      </div>
+      <button class="btn-start" onclick="startApp()">🔍 探索を開始する</button>
+      <div class="intr-note">
+        📱 スマホ：端末を傾けて視点移動（ジャイロ対応）/ ドラッグでも操作可<br>
+        💻 PC：マウスドラッグ または ←→↑↓キーで視点移動
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ GUIDE TAB ═══ -->
+  <div class="tab-panel" id="tabGuide">
+    <div class="tab-scroll">
+
+      <div class="gs">
+        <h2>🎮 使い方</h2>
+        <p>病室を360°見渡して、光っているスポットを探しましょう。タップ（クリック）すると手指衛生のタイミングと理由が表示されます。「🧴 手指消毒する」で発見完了。5つすべてを見つけるとクリアです。</p>
+        <p>右上の☀️/🌙ボタンで昼夜を切り替えられます。夜間は光るスポットがより目立ちます。</p>
+      </div>
+
+      <div class="gs">
+        <h2>🖐 WHO 5モーメント</h2>
+        <div class="mom-card">
+          <div class="mc-head">5つのタイミング</div>
+          <div class="mc-step"><div class="mc-n">1</div><div class="mc-ic">🤝</div><div><div class="mc-nm">患者に触れる前</div><div class="mc-wh">患者の身体に触れる直前。医療者→患者への伝播を防ぐ</div></div></div>
+          <div class="mc-step"><div class="mc-n">2</div><div class="mc-ic">💉</div><div><div class="mc-nm">清潔/無菌操作の前</div><div class="mc-wh">注射・点滴・カテーテル操作など侵襲的処置の前</div></div></div>
+          <div class="mc-step"><div class="mc-n">3</div><div class="mc-ic">⚠️</div><div><div class="mc-nm">体液に暴露された後</div><div class="mc-wh">血液・分泌物・排泄物などに触れた可能性がある後</div></div></div>
+          <div class="mc-step"><div class="mc-n">4</div><div class="mc-ic">🙌</div><div><div class="mc-nm">患者に触れた後</div><div class="mc-wh">患者の身体に触れた後、ベッドサイドを離れる前</div></div></div>
+          <div class="mc-step"><div class="mc-n">5</div><div class="mc-ic">🪑</div><div><div class="mc-nm">患者周辺環境に触れた後</div><div class="mc-wh">ベッド柵・ナースコール・床頭台など周辺物品に触れた後</div></div></div>
+        </div>
+        <p style="font-size:12px;color:#475569;">手指衛生には、アルコール速乾性擦式製剤（ABHR）または石鹸と流水による手洗いを使用します。グローブ着用は手指衛生の代替になりません。</p>
+      </div>
+
+      <div class="gs">
+        <h2>🎓 教育的な使い方</h2>
+        <div class="edu-box">
+          <div class="edu-tag">早期臨床実習 III</div>
+          <h3>VR＋実技演習の組み合わせ</h3>
+          <p>このページを使ってVR探索で5モーメントを直感的に学習した後、実際の病棟やシミュレーション室での実技演習と組み合わせることで、概念と実践を結びつけます。</p>
+        </div>
+        <div class="edu-box">
+          <div class="edu-tag">OSCE 対応</div>
+          <h3>OSCE形式のチェックリストと連動</h3>
+          <p>評価シートを別紙・別画面で用意し、VR探索中に確認された理解度をOSCEチェックリストと照合させます。学習者の自己評価ツールとしても活用できます。</p>
+        </div>
+        <div class="edu-box">
+          <div class="edu-tag">今後の展開</div>
+          <h3>追加予定のシナリオ</h3>
+          <p>救命救急シナリオVR・予防接種カウンセリングVRなど、新しい場面設定のアプリを順次追加予定です。</p>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        本テキストはAI（Claude, Anthropic）を用いて作成されました。内容には誤りが含まれる可能性があります。医療上の判断には必ず公式の教科書・文献・専門家の指導を参照してください。二次利用・再配布は自己責任のもとで可能です。その際、本注記の保持を推奨します。
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ LINKS TAB ═══ -->
+  <div class="tab-panel" id="tabLinks">
+    <div class="tab-scroll">
+      <div class="gs">
+        <h2>🔗 参考リンク</h2>
+
+        <a class="lk-card" href="https://www.who.int/publications/m/item/five-moments-for-hand-hygiene" target="_blank" rel="noopener">
+          <div class="lk-top">
+            <div class="lk-icon">🌍</div>
+            <div>
+              <div class="lk-title">WHO「5 Moments for Hand Hygiene」</div>
+              <div class="lk-org">World Health Organization（WHO）</div>
+              <div class="lk-desc">WHOが提唱する手指衛生の5つのタイミングの公式ページ。このアプリの根拠となる国際ガイドライン。</div>
+            </div>
+          </div>
+          <div class="lk-url">↗ who.int</div>
+        </a>
+
+        <a class="lk-card" href="https://www.youtube.com/watch?v=p2LX1baRKGA" target="_blank" rel="noopener">
+          <div class="lk-top">
+            <div class="lk-icon">▶️</div>
+            <div>
+              <div class="lk-title">ガウンテクニック（動画解説）</div>
+              <div class="lk-org">看護roo!【公式】YouTube</div>
+              <div class="lk-desc">PPE着脱の映像解説。実際の動きと手順を視覚的に確認できます。</div>
+            </div>
+          </div>
+          <div class="lk-note">⚠️ 当院のやり方と脱衣の順番が一部異なります。本学の手順を優先してください。</div>
+          <div class="lk-url">↗ youtube.com</div>
+        </a>
+
+        <a class="lk-card" href="https://somekata.github.io/bactVR/PPE/index.html" target="_blank" rel="noopener">
+          <div class="lk-top">
+            <div class="lk-icon">🧤</div>
+            <div>
+              <div class="lk-title">PPE Training Room</div>
+              <div class="lk-org">somekata.github.io / bactVR</div>
+              <div class="lk-desc">PPE着脱手順をインタラクティブに学習できるWebアプリ。VRと実技の組み合わせ学習に活用できます。</div>
+            </div>
+          </div>
+          <div class="lk-url">↗ somekata.github.io</div>
+        </a>
+
+        <div class="info-box">
+          📌 外部リンクは新しいタブで開きます。各サイトの利用規約に従ってご利用ください。
+        </div>
+      </div>
+
+      <div class="footer-note">
+        本テキストはAI（Claude, Anthropic）を用いて作成されました。内容には誤りが含まれる可能性があります。医療上の判断には必ず公式の教科書・文献・専門家の指導を参照してください。二次利用・再配布は自己責任のもとで可能です。その際、本注記の保持を推奨します。
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content-area -->
+
+<nav class="bottom-tabs">
+  <button class="tab-btn active" id="tbVR" onclick="switchTab('VR')">
+    <span class="ti">🥽</span><span class="tl">VR探索</span>
+  </button>
+  <button class="tab-btn" id="tbGuide" onclick="switchTab('Guide')">
+    <span class="ti">📖</span><span class="tl">解説</span>
+  </button>
+  <button class="tab-btn" id="tbLinks" onclick="switchTab('Links')">
+    <span class="ti">🔗</span><span class="tl">リンク</span>
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════
+// TAB SWITCHING
+// ══════════════════════════════════════
+function switchTab(n) {
+  ['VR','Guide','Links'].forEach(t => {
+    document.getElementById('tab'+t).classList.toggle('active', t===n);
+    document.getElementById('tb'+t).classList.toggle('active', t===n);
+  });
+  if (n === 'VR') {
+    // Re-sync canvas size and restart loop if needed
+    syncCanvasSize();
+    if (APP.started && !APP.running) {
+      APP.running = true;
+      requestAnimationFrame(mainLoop);
+    }
+  } else {
+    APP.running = false;
+  }
+}
+
+// ══════════════════════════════════════
+// DATA
+// ══════════════════════════════════════
+const MOMENTS = [
+  { id:1, title:'患者に触れる前', icon:'🤝',
+    color:[0,200,140], az:30, el:0,
+    desc:'患者の身体に触れる直前に手指消毒します。ベッドサイドで触れる直前が対象です。',
+    why:'💡 あなたの手に付着した微生物から患者を守ります。免疫低下患者へのケア前は特に必須。',
+    ex:'例：握手・脈拍測定・体位変換の前など' },
+  { id:2, title:'清潔/無菌操作の前', icon:'💉',
+    color:[0,150,255], az:130, el:5,
+    desc:'注射・点滴・採血・カテーテル操作など侵襲的処置の直前に手指消毒します。',
+    why:'💡 処置器材や患者体内への微生物混入を防ぎます。グローブ装着前も消毒が必要です。',
+    ex:'例：点滴ポートへのアクセス前・導尿カテーテル挿入前など' },
+  { id:3, title:'体液に暴露された後', icon:'⚠️',
+    color:[255,70,70], az:220, el:-5,
+    desc:'血液・分泌物・排泄物・粘膜などの体液に触れた可能性がある直後に手指消毒します。',
+    why:'💡 自分自身を感染から守り、他の患者・スタッフへの伝播を防ぎます。',
+    ex:'例：採血後・喀痰吸引後・おむつ交換後など' },
+  { id:4, title:'患者に触れた後', icon:'🙌',
+    color:[255,190,0], az:310, el:0,
+    desc:'患者の身体に触れた後、ベッドサイドを離れる前に手指消毒します。',
+    why:'💡 患者の微生物が手を介して環境や他の患者に広がることを防ぎます。',
+    ex:'例：体温測定後・体を拭いた後・体位変換後など' },
+  { id:5, title:'患者周辺環境に触れた後', icon:'🪑',
+    color:[170,90,255], az:190, el:12,
+    desc:'ベッド柵・ナースコール・床頭台など患者周囲の物品に触れた後に手指消毒します。',
+    why:'💡 患者周辺環境は微生物で汚染されています。触れた後の消毒で伝播を防ぎます。',
+    ex:'例：ベッド柵を上げた後・ナースコールを手渡した後など' },
+];
+
+// ══════════════════════════════════════
+// CANVAS SETUP
+// ══════════════════════════════════════
+const canvas = document.getElementById('vrCanvas');
+const ctx = canvas.getContext('2d');
+let W = 0, H = 0;
+
+function syncCanvasSize() {
+  const panel = document.getElementById('tabVR');
+  const r = panel.getBoundingClientRect();
+  W = Math.floor(r.width)  || window.innerWidth;
+  H = Math.floor(r.height) || (window.innerHeight - 50 - 54);
+  canvas.width  = W;
+  canvas.height = H;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+}
+
+window.addEventListener('resize', () => { syncCanvasSize(); });
+
+// ══════════════════════════════════════
+// APP STATE
+// ══════════════════════════════════════
+const APP = {
+  camAz: 0, camEl: 0,
+  dayMode: true,
+  found: new Set(),
+  activeMoment: null,
+  started: false, running: false,
+  score: 0,
+  gyroBase: null,
+};
+
+// ══════════════════════════════════════
+// DRAWING
+// ══════════════════════════════════════
+function drawRoom(az, el) {
+  if (W === 0 || H === 0) return;
+  ctx.clearRect(0, 0, W, H);
+  const day = APP.dayMode;
+  const hy = H * 0.50 - (el / 40) * H * 0.12; // horizon Y
+
+  // ── CEILING ──
+  const cg = ctx.createLinearGradient(0, 0, 0, hy);
+  if (day) { cg.addColorStop(0,'#ddeef8'); cg.addColorStop(1,'#cce4f5'); }
+  else      { cg.addColorStop(0,'#0c1a2a'); cg.addColorStop(1,'#102030'); }
+  ctx.fillStyle = cg; ctx.fillRect(0, 0, W, hy);
+
+  // ── WALL BAND ──
+  const wh = H * 0.26, wy = hy - wh * 0.5;
+  const wg = ctx.createLinearGradient(0, wy, 0, wy+wh);
+  if (day) { wg.addColorStop(0,'#e8f2e8'); wg.addColorStop(1,'#dceadc'); }
+  else      { wg.addColorStop(0,'#0e1e0e'); wg.addColorStop(1,'#0c180c'); }
+  ctx.fillStyle = wg; ctx.fillRect(0, wy, W, wh);
+
+  // wall border lines
+  ctx.strokeStyle = day ? 'rgba(140,180,140,0.35)' : 'rgba(40,80,40,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,wy); ctx.lineTo(W,wy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,wy+wh); ctx.lineTo(W,wy+wh); ctx.stroke();
+
+  // ── FLOOR ──
+  const fg = ctx.createLinearGradient(0, hy, 0, H);
+  if (day) { fg.addColorStop(0,'#c8d8c0'); fg.addColorStop(1,'#b0c4a8'); }
+  else      { fg.addColorStop(0,'#0c180c'); fg.addColorStop(1,'#08100a'); }
+  ctx.fillStyle = fg; ctx.fillRect(0, hy, W, H - hy);
+
+  // ── FLOOR GRID ──
+  drawGrid(hy, az, day);
+
+  // ── CEILING LIGHTS ──
+  for (let la = 0; la < 360; la += 90) {
+    drawLight(azToX(la, az), hy * 0.1, day);
+  }
+
+  // ── OBJECTS ──
+  drawBed(        azToX(20,  az), hy, day);
+  drawIVStand(    azToX(110, az), hy, day);
+  drawWasteBin(   azToX(200, az), hy, day);
+  drawDoor(       azToX(270, az), hy, day);
+  drawBedTable(   azToX(55,  az), hy, day);
+  drawSink(       azToX(320, az), hy, day);
+  drawWindow(     azToX(340, az), hy, day);
+}
+
+function azToX(target, current) {
+  let d = target - current;
+  while (d >  180) d -= 360;
+  while (d < -180) d += 360;
+  return W / 2 + (d / 110) * W;
+}
+
+function drawGrid(hy, az, day) {
+  ctx.save();
+  const vx = W / 2 - ((az % 360) / 360) * W * 0.25;
+  const n = 16;
+  ctx.strokeStyle = day ? 'rgba(120,160,120,0.14)' : 'rgba(40,80,40,0.28)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= n; i++) {
+    const x = (i / n) * W;
+    ctx.beginPath(); ctx.moveTo(vx, hy); ctx.lineTo(x, H); ctx.stroke();
+  }
+  const off = (az % 22) / 22;
+  for (let d = 0; d < 9; d++) {
+    const t = (d + off) / 9;
+    const y = hy + (H - hy) * t * t * 1.7;
+    if (y > hy && y < H) {
+      ctx.globalAlpha = 0.05 + t * 0.1;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawLight(x, y, day) {
+  if (x < -50 || x > W + 50) return;
+  ctx.save();
+  ctx.fillStyle = day ? 'rgba(240,248,255,0.92)' : 'rgba(255,240,180,0.8)';
+  ctx.fillRect(x - 22, y, 44, 7);
+  const g = ctx.createRadialGradient(x, y + 4, 0, x, y + 4, day ? 80 : 110);
+  g.addColorStop(0, day ? 'rgba(255,255,240,0.1)' : 'rgba(255,235,150,0.18)');
+  g.addColorStop(1, 'transparent');
+  ctx.fillStyle = g;
+  ctx.fillRect(x - 110, y, 220, 130);
+  ctx.restore();
+}
+
+function drawBed(x, hy, day) {
+  if (x < -180 || x > W + 180) return;
+  ctx.save();
+  // frame
+  ctx.fillStyle = day ? '#aabab0' : '#2a3830';
+  ctx.fillRect(x-88, hy-6, 176, 46);
+  // mattress
+  ctx.fillStyle = day ? '#ddeedd' : '#1e2e1e';
+  ctx.fillRect(x-84, hy-4, 168, 38);
+  // white sheet
+  ctx.fillStyle = day ? '#f4f8f4' : '#192819';
+  ctx.fillRect(x-80, hy-2, 160, 28);
+  // pillow
+  ctx.fillStyle = day ? '#ffffff' : '#202e20';
+  ctx.fillRect(x-72, hy, 52, 20);
+  ctx.strokeStyle = day ? 'rgba(0,0,0,0.07)' : 'rgba(100,160,100,0.2)';
+  ctx.lineWidth = 1; ctx.strokeRect(x-72, hy, 52, 20);
+  // blanket
+  ctx.fillStyle = day ? '#5aaa9c' : '#194038';
+  ctx.fillRect(x-16, hy+1, 96, 24);
+  // headboard
+  ctx.fillStyle = day ? '#8a9e98' : '#1e3028';
+  ctx.fillRect(x-90, hy-34, 14, 68);
+  // footboard
+  ctx.fillStyle = day ? '#8a9e98' : '#1e3028';
+  ctx.fillRect(x+76, hy-18, 14, 54);
+  // rails
+  ctx.strokeStyle = day ? 'rgba(140,180,160,0.85)' : 'rgba(50,100,70,0.7)';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(x-78, hy-6); ctx.lineTo(x-78, hy+38); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+78, hy-6); ctx.lineTo(x+78, hy+38); ctx.stroke();
+  // legs
+  ctx.fillStyle = day ? '#7a8e88' : '#162418';
+  ctx.fillRect(x-84, hy+38, 8, 18);
+  ctx.fillRect(x+76, hy+38, 8, 18);
+  // patient lump
+  ctx.fillStyle = day ? 'rgba(90,120,110,0.28)' : 'rgba(40,70,55,0.5)';
+  ctx.beginPath(); ctx.ellipse(x+18, hy+11, 48, 11, 0, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+function drawIVStand(x, hy, day) {
+  if (x < -80 || x > W + 80) return;
+  ctx.save();
+  ctx.strokeStyle = day ? '#9aacb8' : '#28404e';
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(x, hy+55); ctx.lineTo(x, hy-100); ctx.stroke();
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(x-18, hy-95); ctx.lineTo(x+18, hy-95); ctx.stroke();
+  // bag
+  ctx.fillStyle = day ? 'rgba(160,215,235,0.55)' : 'rgba(40,110,140,0.45)';
+  ctx.strokeStyle = day ? 'rgba(90,155,190,0.7)' : 'rgba(40,90,120,0.6)';
+  ctx.lineWidth = 1.5;
+  ctx.fillRect(x-13, hy-92, 26, 38);
+  ctx.strokeRect(x-13, hy-92, 26, 38);
+  // label on bag
+  ctx.fillStyle = day ? 'rgba(255,255,255,0.65)' : 'rgba(100,160,180,0.35)';
+  ctx.fillRect(x-8, hy-82, 16, 8);
+  // drip chamber
+  ctx.fillStyle = day ? 'rgba(140,200,220,0.6)' : 'rgba(40,90,110,0.5)';
+  ctx.fillRect(x-5, hy-52, 10, 15);
+  // tube
+  ctx.strokeStyle = day ? 'rgba(140,190,210,0.45)' : 'rgba(35,75,95,0.4)';
+  ctx.lineWidth = 1.5; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(x, hy-37); ctx.lineTo(x, hy); ctx.stroke();
+  ctx.setLineDash([]);
+  // base
+  ctx.fillStyle = day ? '#7888a0' : '#1a2a38';
+  ctx.fillRect(x-22, hy+50, 44, 7);
+  for (let dx = -18; dx <= 18; dx += 18) {
+    ctx.beginPath(); ctx.arc(x+dx, hy+57, 4, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawWasteBin(x, hy, day) {
+  if (x < -70 || x > W + 70) return;
+  ctx.save();
+  ctx.fillStyle = day ? '#d4a820' : '#503c00';
+  ctx.strokeStyle = day ? '#b08800' : '#806000';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x-20, hy+62); ctx.lineTo(x-15, hy+18);
+  ctx.lineTo(x+15, hy+18); ctx.lineTo(x+20, hy+62);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // lid
+  ctx.fillStyle = day ? '#c49010' : '#403000';
+  ctx.fillRect(x-17, hy+13, 34, 8);
+  ctx.fillStyle = day ? '#b88000' : '#302200';
+  ctx.fillRect(x-15, hy+10, 30, 5);
+  // symbol
+  ctx.font = 'bold 17px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = day ? 'rgba(70,35,0,0.7)' : 'rgba(210,160,0,0.65)';
+  ctx.fillText('☣', x, hy+40);
+  ctx.font = 'bold 7px sans-serif';
+  ctx.fillStyle = day ? 'rgba(70,35,0,0.5)' : 'rgba(180,130,0,0.45)';
+  ctx.fillText('BIOHAZARD', x, hy+54);
+  ctx.restore();
+}
+
+function drawDoor(x, hy, day) {
+  if (x < -100 || x > W + 100) return;
+  ctx.save();
+  const h = 108, w = 58;
+  ctx.fillStyle = day ? '#d0e8c8' : '#182816';
+  ctx.strokeStyle = day ? 'rgba(130,170,120,0.5)' : 'rgba(45,85,40,0.5)';
+  ctx.lineWidth = 2;
+  ctx.fillRect(x-w/2, hy-h*0.72, w, h);
+  ctx.strokeRect(x-w/2, hy-h*0.72, w, h);
+  // frame
+  ctx.strokeStyle = day ? 'rgba(100,145,90,0.4)' : 'rgba(35,70,30,0.45)';
+  ctx.strokeRect(x-w/2-3, hy-h*0.72-3, w+6, h+4);
+  // window
+  ctx.fillStyle = day ? 'rgba(190,225,255,0.4)' : 'rgba(15,38,58,0.6)';
+  ctx.strokeStyle = day ? 'rgba(130,180,225,0.5)' : 'rgba(25,55,85,0.4)';
+  ctx.lineWidth = 1;
+  ctx.fillRect(x-13, hy-h*0.62, 26, 22);
+  ctx.strokeRect(x-13, hy-h*0.62, 26, 22);
+  ctx.beginPath(); ctx.moveTo(x, hy-h*0.62); ctx.lineTo(x, hy-h*0.62+22); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-13, hy-h*0.62+11); ctx.lineTo(x+13, hy-h*0.62+11); ctx.stroke();
+  // handle
+  ctx.fillStyle = day ? '#a0b498' : '#283820';
+  ctx.fillRect(x+19, hy-h*0.32, 5, 17);
+  ctx.beginPath(); ctx.arc(x+21, hy-h*0.36, 4, 0, Math.PI*2); ctx.fill();
+  // sign
+  ctx.font = '7px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = day ? 'rgba(70,100,60,0.7)' : 'rgba(90,155,75,0.5)';
+  ctx.fillText('病室', x, hy-h*0.16);
+  ctx.restore();
+}
+
+function drawBedTable(x, hy, day) {
+  if (x < -90 || x > W + 90) return;
+  ctx.save();
+  ctx.fillStyle = day ? '#c0d2b8' : '#1e2e18';
+  ctx.strokeStyle = day ? 'rgba(140,175,130,0.45)' : 'rgba(52,85,45,0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.fillRect(x-44, hy-10, 88, 11);
+  ctx.strokeRect(x-44, hy-10, 88, 11);
+  // items
+  ctx.fillStyle = day ? 'rgba(170,210,200,0.7)' : 'rgba(35,75,58,0.6)';
+  ctx.fillRect(x-30, hy-22, 15, 13);
+  ctx.fillStyle = day ? 'rgba(250,250,245,0.82)' : 'rgba(45,65,45,0.5)';
+  ctx.fillRect(x+10, hy-24, 20, 15);
+  ctx.fillStyle = day ? 'rgba(90,135,100,0.5)' : 'rgba(75,120,75,0.4)';
+  for (let i = 0; i < 3; i++) ctx.fillRect(x+12, hy-20+i*4, 15, 1.5);
+  // legs
+  ctx.strokeStyle = day ? 'rgba(140,180,130,0.7)' : 'rgba(48,80,42,0.6)';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(x-37, hy); ctx.lineTo(x-37, hy+40); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x+37, hy); ctx.lineTo(x+37, hy+40); ctx.stroke();
+  ctx.restore();
+}
+
+function drawSink(x, hy, day) {
+  if (x < -90 || x > W + 90) return;
+  ctx.save();
+  ctx.fillStyle = day ? '#a8bcb4' : '#182820';
+  ctx.fillRect(x-28, hy-18, 56, 5);
+  // basin
+  ctx.fillStyle = day ? '#d0e4dc' : '#1a2e24';
+  ctx.strokeStyle = day ? 'rgba(140,185,165,0.5)' : 'rgba(45,90,65,0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x-27, hy-13); ctx.lineTo(x-23, hy+9);
+  ctx.lineTo(x+23, hy+9); ctx.lineTo(x+27, hy-13);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  // water
+  ctx.fillStyle = day ? 'rgba(150,205,225,0.25)' : 'rgba(25,75,98,0.3)';
+  ctx.fillRect(x-21, hy-7, 42, 14);
+  // faucet
+  ctx.fillStyle = day ? '#a0b4ac' : '#1e2e28';
+  ctx.fillRect(x-3, hy-28, 6, 16);
+  ctx.fillRect(x-9, hy-30, 18, 5);
+  // soap
+  ctx.fillStyle = day ? 'rgba(190,215,100,0.7)' : 'rgba(55,78,18,0.5)';
+  ctx.fillRect(x+18, hy-30, 10, 20);
+  ctx.font = '6px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = day ? 'rgba(70,95,18,0.75)' : 'rgba(135,170,48,0.5)';
+  ctx.fillText('OH', x+23, hy-18);
+  ctx.restore();
+}
+
+function drawWindow(x, hy, day) {
+  if (x < -100 || x > W + 100) return;
+  ctx.save();
+  // frame
+  ctx.fillStyle = day ? '#c0d0b8' : '#182618';
+  ctx.fillRect(x-40, hy-90, 80, 80);
+  // glass
+  if (day) {
+    const sg = ctx.createLinearGradient(x-36, hy-86, x-36, hy-14);
+    sg.addColorStop(0, '#85ccea'); sg.addColorStop(1, '#b5dbf6');
+    ctx.fillStyle = sg;
+  } else {
+    ctx.fillStyle = '#04090e';
+  }
+  ctx.fillRect(x-36, hy-86, 72, 72);
+  if (day) {
+    // clouds
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    [[x-14,hy-72,8],[x-7,hy-68,10],[x+1,hy-70,9],[x+9,hy-68,8]].forEach(([cx,cy,r]) => {
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+    });
+    // sun
+    ctx.fillStyle = 'rgba(255,215,45,0.82)';
+    ctx.beginPath(); ctx.arc(x+26, hy-78, 8, 0, Math.PI*2); ctx.fill();
+  } else {
+    // stars
+    ctx.fillStyle = 'rgba(200,218,255,0.7)';
+    [[x-20,hy-75],[x+10,hy-80],[x-5,hy-62],[x+24,hy-72],[x-27,hy-56]].forEach(([sx,sy]) => {
+      ctx.beginPath(); ctx.arc(sx, sy, 1.2, 0, Math.PI*2); ctx.fill();
+    });
+    // moon
+    ctx.fillStyle = 'rgba(215,215,195,0.5)';
+    ctx.beginPath(); ctx.arc(x+23, hy-77, 7, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#04090e';
+    ctx.beginPath(); ctx.arc(x+26, hy-77, 5.5, 0, Math.PI*2); ctx.fill();
+  }
+  // blind
+  ctx.fillStyle = day ? 'rgba(215,228,215,0.3)' : 'rgba(28,48,28,0.4)';
+  ctx.fillRect(x-36, hy-86, 72, 12);
+  // cross panes
+  ctx.strokeStyle = day ? 'rgba(170,195,165,0.5)' : 'rgba(45,78,42,0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x, hy-86); ctx.lineTo(x, hy-14); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x-36, hy-50); ctx.lineTo(x+36, hy-50); ctx.stroke();
+  ctx.restore();
+}
+
+// ══════════════════════════════════════
+// HOTSPOTS
+// ══════════════════════════════════════
+let hotspots = [];
+
+function updateHotspots(az, el) {
+  const hy = H * 0.50 - (el / 40) * H * 0.12;
+  hotspots = MOMENTS.map(m => ({
+    m,
+    x: azToX(m.az, az),
+    y: hy - (m.el - el) * (H * 0.006),
+    r: 28,
+    vis: true
+  }));
+}
+
+function drawHotspots(t) {
+  hotspots.forEach(hs => {
+    if (hs.x < -70 || hs.x > W + 70) return;
+    if (APP.found.has(hs.m.id)) { drawFoundBadge(hs); return; }
+
+    const [r, g, b] = hs.m.color;
+    const pulse = (Math.sin(t * 0.0025 + hs.m.id * 1.4) + 1) / 2;
+    const gR = hs.r + 30 + pulse * 16;
+
+    // outer glow
+    const gg = ctx.createRadialGradient(hs.x, hs.y, 0, hs.x, hs.y, gR);
+    gg.addColorStop(0, `rgba(${r},${g},${b},${0.38 + pulse * 0.22})`);
+    gg.addColorStop(0.55, `rgba(${r},${g},${b},0.1)`);
+    gg.addColorStop(1, 'transparent');
+    ctx.beginPath(); ctx.arc(hs.x, hs.y, gR, 0, Math.PI*2);
+    ctx.fillStyle = gg; ctx.fill();
+
+    // pulsing ring
+    ctx.beginPath(); ctx.arc(hs.x, hs.y, hs.r + 11 + pulse * 9, 0, Math.PI*2);
+    ctx.strokeStyle = `rgba(${r},${g},${b},${0.35 + pulse * 0.45})`;
+    ctx.lineWidth = 2; ctx.stroke();
+
+    // core
+    const cg = ctx.createRadialGradient(hs.x - 5, hs.y - 5, 0, hs.x, hs.y, hs.r);
+    cg.addColorStop(0, `rgba(${r},${g},${b},0.97)`);
+    cg.addColorStop(1, `rgba(${Math.floor(r*0.5)},${Math.floor(g*0.5)},${Math.floor(b*0.5)},0.88)`);
+    ctx.beginPath(); ctx.arc(hs.x, hs.y, hs.r, 0, Math.PI*2);
+    ctx.fillStyle = cg; ctx.fill();
+
+    // white edge
+    ctx.beginPath(); ctx.arc(hs.x, hs.y, hs.r - 2, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 2; ctx.stroke();
+
+    // icon
+    ctx.font = '20px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(hs.m.icon, hs.x, hs.y - 1);
+
+    // number badge
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.beginPath(); ctx.arc(hs.x + 20, hs.y - 20, 9, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px Space Mono, monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(hs.m.id, hs.x + 20, hs.y - 20);
+    ctx.restore();
+
+    // TAP hint
+    if (pulse > 0.82) {
+      ctx.save();
+      ctx.globalAlpha = (pulse - 0.82) / 0.18;
+      ctx.fillStyle = `rgba(${r},${g},${b},0.95)`;
+      ctx.font = "bold 11px 'Noto Sans JP', sans-serif";
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText('タップ!', hs.x, hs.y + hs.r + 6);
+      ctx.restore();
+    }
+  });
+}
+
+function drawFoundBadge(hs) {
+  ctx.save();
+  ctx.beginPath(); ctx.arc(hs.x, hs.y, 22, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(74,222,128,0.18)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(74,222,128,0.6)'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.font = 'bold 16px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(74,222,128,0.92)';
+  ctx.fillText('✓', hs.x, hs.y);
+  ctx.restore();
+}
+
+function drawCrosshair() {
+  const cx = W/2, cy = H/2;
+  ctx.save();
+  ctx.strokeStyle = APP.dayMode ? 'rgba(0,0,0,0.16)' : 'rgba(255,255,255,0.2)';
+  ctx.lineWidth = 1; ctx.setLineDash([3, 4]);
+  ctx.beginPath(); ctx.moveTo(cx-12, cy); ctx.lineTo(cx+12, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy-12); ctx.lineTo(cx, cy+12); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+// ══════════════════════════════════════
+// MAIN LOOP
+// ══════════════════════════════════════
+function mainLoop(t) {
+  if (!APP.running) return;
+  drawRoom(APP.camAz, APP.camEl);
+  updateHotspots(APP.camAz, APP.camEl);
+  drawHotspots(t);
+  drawCrosshair();
+  requestAnimationFrame(mainLoop);
+}
+
+// ══════════════════════════════════════
+// INPUT — MOUSE
+// ══════════════════════════════════════
+let drag = { on: false, lx: 0, ly: 0 };
+canvas.addEventListener('mousedown', e => { drag.on = true; drag.lx = e.clientX; drag.ly = e.clientY; });
+window.addEventListener('mousemove', e => {
+  if (!drag.on) return;
+  APP.camAz = (APP.camAz - (e.clientX - drag.lx) * 0.28 + 360) % 360;
+  APP.camEl = Math.max(-28, Math.min(28, APP.camEl + (e.clientY - drag.ly) * 0.18));
+  drag.lx = e.clientX; drag.ly = e.clientY;
+});
+window.addEventListener('mouseup', () => { drag.on = false; });
+canvas.addEventListener('click', e => { if (!drag.moved) handleTap(e.clientX, e.clientY); });
+
+// ── KEYBOARD (PC) ──
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.key] = true; });
+window.addEventListener('keyup',   e => { keys[e.key] = false; });
+
+function applyKeys() {
+  const speed = 1.5;
+  if (keys['ArrowLeft']  || keys['a'] || keys['A']) APP.camAz = (APP.camAz - speed + 360) % 360;
+  if (keys['ArrowRight'] || keys['d'] || keys['D']) APP.camAz = (APP.camAz + speed) % 360;
+  if (keys['ArrowUp']    || keys['w'] || keys['W']) APP.camEl = Math.min(28, APP.camEl + speed * 0.7);
+  if (keys['ArrowDown']  || keys['s'] || keys['S']) APP.camEl = Math.max(-28, APP.camEl - speed * 0.7);
+}
+
+// Wrap mainLoop to apply keys each frame
+const _mainLoop = mainLoop;
+function mainLoop(t) {
+  if (!APP.running) return;
+  applyKeys();
+  drawRoom(APP.camAz, APP.camEl);
+  updateHotspots(APP.camAz, APP.camEl);
+  drawHotspots(t);
+  drawCrosshair();
+  requestAnimationFrame(mainLoop);
+}
+
+// ── TOUCH ──
+let tc = { on: false, lx: 0, ly: 0, sx: 0, sy: 0, isTap: false };
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length !== 1) return;
+  tc.on = true; tc.isTap = true;
+  tc.lx = tc.sx = e.touches[0].clientX;
+  tc.ly = tc.sy = e.touches[0].clientY;
+}, { passive: true });
+canvas.addEventListener('touchmove', e => {
+  if (!tc.on || e.touches.length !== 1) return;
+  const dx = e.touches[0].clientX - tc.lx;
+  const dy = e.touches[0].clientY - tc.ly;
+  if (Math.abs(e.touches[0].clientX - tc.sx) > 7 || Math.abs(e.touches[0].clientY - tc.sy) > 7) tc.isTap = false;
+  if (!gyroOn) {
+    APP.camAz = (APP.camAz - dx * 0.38 + 360) % 360;
+    APP.camEl = Math.max(-28, Math.min(28, APP.camEl + dy * 0.22));
+  }
+  tc.lx = e.touches[0].clientX; tc.ly = e.touches[0].clientY;
+}, { passive: true });
+canvas.addEventListener('touchend', e => {
+  if (tc.isTap && tc.on) handleTap(tc.sx, tc.sy);
+  tc.on = false;
+});
+
+function handleTap(x, y) {
+  if (!APP.started) return;
+  if (document.getElementById('popup').classList.contains('show')) return;
+  for (const hs of hotspots) {
+    if (hs.x < -70 || hs.x > W + 70) continue;
+    if (APP.found.has(hs.m.id)) continue;
+    if (Math.hypot(x - hs.x, y - hs.y) < hs.r + 18) { openPopup(hs.m); return; }
+  }
+}
+
+// ══════════════════════════════════════
+// GYROSCOPE
+// ══════════════════════════════════════
+let gyroOn = false;
+function initGyro() {
+  if (typeof DeviceOrientationEvent === 'undefined') return;
+  const req = typeof DeviceOrientationEvent.requestPermission === 'function'
+    ? DeviceOrientationEvent.requestPermission : null;
+  if (req) {
+    document.addEventListener('touchstart', async function p() {
+      try { const r = await req(); if (r === 'granted') listenGyro(); } catch(e) {}
+      document.removeEventListener('touchstart', p);
+    }, { once: true });
+  } else {
+    listenGyro();
+  }
+}
+function listenGyro() {
+  window.addEventListener('deviceorientation', e => {
+    if (e.alpha === null) return;
+    gyroOn = true;
+    if (APP.gyroBase === null) APP.gyroBase = e.alpha;
+    let da = e.alpha - APP.gyroBase; if (da < 0) da += 360;
+    APP.camAz = (360 - da) % 360;
+    APP.camEl = Math.max(-28, Math.min(28, -(e.beta - 60) * 0.5));
+    const b = document.getElementById('gyroBadge');
+    b.textContent = '📱 ジャイロ ON'; b.classList.add('on');
+  });
+}
+
+// ══════════════════════════════════════
+// POPUP
+// ══════════════════════════════════════
+function openPopup(m) {
+  APP.activeMoment = m;
+  document.getElementById('popNum').textContent   = `MOMENT ${m.id} / 5`;
+  document.getElementById('popIcon').textContent  = m.icon;
+  document.getElementById('popTitle').textContent = m.title;
+  document.getElementById('popDesc').textContent  = m.desc + ' ' + m.ex;
+  document.getElementById('popWhy').textContent   = m.why;
+  document.getElementById('popup').classList.add('show');
+}
+function closePopup() {
+  document.getElementById('popup').classList.remove('show');
+  APP.activeMoment = null;
+}
+function confirmMoment() {
+  if (!APP.activeMoment) return;
+  APP.found.add(APP.activeMoment.id);
+  APP.score += 20;
+  closePopup();
+  document.getElementById('vrFound').textContent  = APP.found.size;
+  document.getElementById('hdrFound').textContent = APP.found.size;
+  document.getElementById('hdrScore').textContent = APP.score;
+  showToast('🧴 手指消毒完了！');
+  updateDots();
+  if (APP.found.size === 5) setTimeout(showCompletion, 700);
+}
+
+// ══════════════════════════════════════
+// DAY / NIGHT
+// ══════════════════════════════════════
+function toggleDN() {
+  APP.dayMode = !APP.dayMode;
+  document.getElementById('dnBtn').textContent = APP.dayMode ? '☀️ 昼' : '🌙 夜';
+}
+
+// ══════════════════════════════════════
+// UI
+// ══════════════════════════════════════
+function updateDots() {
+  document.getElementById('progDots').innerHTML = MOMENTS.map(m =>
+    `<div class="pdot ${APP.found.has(m.id) ? 'done' : ''}"></div>`
+  ).join('');
+}
+
+function showCompletion() {
+  APP.running = false;
+  document.getElementById('momSum').innerHTML = MOMENTS.map(m =>
+    `<div class="ms-row">
+      <div class="ms-n">${m.id}</div>
+      <div class="ms-ic">${m.icon}</div>
+      <div class="ms-nm">${m.title}</div>
+      <div class="ms-ck">✅</div>
+    </div>`
+  ).join('');
+  document.getElementById('vrCompletion').classList.add('show');
+}
+
+function restartGame() {
+  APP.found.clear(); APP.activeMoment = null;
+  APP.camAz = 0; APP.camEl = 0; APP.gyroBase = null;
+  APP.score = 0; APP.running = true;
+  document.getElementById('vrCompletion').classList.remove('show');
+  document.getElementById('vrFound').textContent  = '0';
+  document.getElementById('hdrFound').textContent = '0';
+  document.getElementById('hdrScore').textContent = '0';
+  updateDots();
+  requestAnimationFrame(mainLoop);
+}
+
+let toastT = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => t.classList.remove('show'), 1400);
+}
+
+// ══════════════════════════════════════
+// START
+// ══════════════════════════════════════
+function startApp() {
+  document.getElementById('vrIntro').style.display = 'none';
+  APP.started = true; APP.running = true;
+  syncCanvasSize();
+  updateDots();
+  initGyro();
+  requestAnimationFrame(mainLoop);
+  // hint
+  const h = document.createElement('div');
+  h.className = 'kb-hint';
+  h.textContent = '💻 ←→↑↓キー / マウスドラッグ  📱 ドラッグまたは端末を傾ける';
+  document.querySelector('.vr-hud').appendChild(h);
+  setTimeout(() => h.remove(), 4500);
+}
+
+// Initial setup
+updateDots();
+// Defer syncCanvasSize so layout is ready
+setTimeout(syncCanvasSize, 100);
+</script>
+</body>
+</html>
