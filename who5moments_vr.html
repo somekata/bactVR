@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>WHO 5 Moments VR</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  color: white;
+  position: fixed;
+  inset: 0;
+  touch-action: none;
+}
+
+/* ══ CANVAS ══ */
+#vrCanvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+#vrCanvas:active { cursor: grabbing; }
+
+/* ══ HUD OVERLAY ══ */
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Top bar */
+.hud-top {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding: env(safe-area-inset-top, 12px) 16px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+}
+.hud-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: #00ffcc;
+  letter-spacing: 1.5px;
+  text-shadow: 0 0 12px rgba(0,255,204,0.6);
+}
+.hud-score {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+}
+.hud-score span { color: #ffd700; font-weight: 700; }
+
+/* Gyro indicator */
+.gyro-badge {
+  position: absolute;
+  top: 58px; right: 16px;
+  background: rgba(0,255,204,0.12);
+  border: 1px solid rgba(0,255,204,0.35);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 10px;
+  color: rgba(0,255,204,0.8);
+  pointer-events: none;
+}
+.gyro-badge.inactive { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.2); color: rgba(255,255,255,0.4); }
+
+/* Drag hint */
+.drag-hint {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+  white-space: nowrap;
+  animation: fadeInOut 3s ease forwards;
+}
+@keyframes fadeInOut { 0%{opacity:0} 15%{opacity:1} 70%{opacity:1} 100%{opacity:0} }
+
+/* Progress dots */
+.progress-dots {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+}
+.pdot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  border: 1px solid rgba(255,255,255,0.4);
+  transition: all 0.3s;
+}
+.pdot.done { background: #00ffcc; border-color: #00ffcc; box-shadow: 0 0 8px rgba(0,255,204,0.8); }
+.pdot.active { background: #ffd700; border-color: #ffd700; box-shadow: 0 0 8px rgba(255,215,0,0.8); transform: scale(1.3); }
+
+/* ══ MOMENT POPUP ══ */
+#popup {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) scale(0.85);
+  width: min(340px, 90vw);
+  background: rgba(0,8,20,0.92);
+  border: 1.5px solid rgba(0,255,204,0.45);
+  border-radius: 22px;
+  padding: 22px 20px 18px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  pointer-events: auto;
+  z-index: 50;
+  display: none;
+  box-shadow: 0 0 40px rgba(0,255,204,0.15), 0 20px 60px rgba(0,0,0,0.6);
+}
+#popup.show {
+  display: block;
+  animation: popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+}
+@keyframes popIn {
+  from { transform: translate(-50%,-50%) scale(0.7); opacity: 0; }
+  to   { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+}
+
+.popup-num {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: rgba(0,255,204,0.7);
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+.popup-title {
+  font-size: 17px;
+  font-weight: 900;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+.popup-icon { font-size: 40px; text-align: center; margin-bottom: 10px; }
+.popup-desc {
+  font-size: 13px;
+  color: rgba(255,255,255,0.8);
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+.popup-why {
+  background: rgba(0,255,204,0.08);
+  border: 1px solid rgba(0,255,204,0.2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: rgba(0,255,204,0.9);
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+.popup-btn {
+  width: 100%;
+  padding: 13px;
+  background: #00ffcc;
+  color: #000;
+  border: none;
+  border-radius: 13px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.popup-btn:hover { background: #00e6b8; }
+.popup-close {
+  position: absolute;
+  top: 12px; right: 14px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+/* ══ COMPLETION ══ */
+#completion {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,5,15,0.92);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  z-index: 80;
+  pointer-events: auto;
+}
+#completion.show { display: flex; }
+.comp-title { font-size: 26px; font-weight: 900; text-align: center; margin-bottom: 6px; color: #00ffcc; text-shadow: 0 0 20px rgba(0,255,204,0.5); }
+.comp-sub { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 24px; text-align: center; }
+
+.moments-summary {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.ms-row {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ms-num {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  background: rgba(0,255,204,0.15);
+  color: #00ffcc;
+  border-radius: 6px;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.ms-icon { font-size: 20px; flex-shrink: 0; }
+.ms-name { font-size: 12px; font-weight: 700; flex: 1; }
+.ms-check { font-size: 16px; }
+
+.comp-restart {
+  width: 100%;
+  max-width: 360px;
+  padding: 15px;
+  background: #00ffcc;
+  color: #000;
+  border: none;
+  border-radius: 14px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 10px;
+}
+.comp-restart:hover { background: #00e6b8; transform: translateY(-1px); }
+
+/* ══ INTRO SCREEN ══ */
+#intro {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,5,15,0.96);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  z-index: 90;
+  pointer-events: auto;
+}
+.intro-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: #00ffcc;
+  text-align: center;
+  margin-bottom: 4px;
+  text-shadow: 0 0 24px rgba(0,255,204,0.5);
+  letter-spacing: 1px;
+}
+.intro-sub {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  text-align: center;
+  margin-bottom: 28px;
+  letter-spacing: 1px;
+}
+.who-badge {
+  background: rgba(0,255,204,0.08);
+  border: 1.5px solid rgba(0,255,204,0.3);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 22px;
+  max-width: 340px;
+  width: 100%;
+}
+.who-badge p {
+  font-size: 12px;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.7;
+  text-align: center;
+}
+.moment-list {
+  width: 100%;
+  max-width: 340px;
+  margin-bottom: 24px;
+}
+.ml-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  font-size: 12px;
+  color: rgba(255,255,255,0.8);
+}
+.ml-item:last-child { border-bottom: none; }
+.ml-n {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  background: #00ffcc;
+  color: #000;
+  border-radius: 5px;
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.intro-start {
+  width: 100%;
+  max-width: 340px;
+  padding: 16px;
+  background: #00ffcc;
+  color: #000;
+  border: none;
+  border-radius: 14px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 10px;
+}
+.intro-start:hover { background: #00e6b8; }
+.intro-note {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  text-align: center;
+  line-height: 1.6;
+  max-width: 300px;
+}
+
+/* ══ FOOTER ══ */
+#footerNote {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 8px 12px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  font-size: 9px;
+  color: rgba(255,255,255,0.2);
+  text-align: center;
+  line-height: 1.5;
+  pointer-events: none;
+  z-index: 5;
+}
+</style>
+</head>
+<body>
+
+<!-- ══ VR CANVAS ══ -->
+<canvas id="vrCanvas"></canvas>
+
+<!-- ══ HUD ══ -->
+<div id="hud">
+  <div class="hud-top">
+    <div class="hud-title">WHO 5 MOMENTS</div>
+    <div class="hud-score">発見: <span id="foundCount">0</span>/5</div>
+  </div>
+  <div class="gyro-badge inactive" id="gyroBadge">📱 ジャイロ</div>
+  <div class="progress-dots" id="progressDots"></div>
+</div>
+
+<!-- ══ MOMENT POPUP ══ -->
+<div id="popup">
+  <button class="popup-close" onclick="closePopup()">✕</button>
+  <div class="popup-num" id="popNum">MOMENT 1</div>
+  <div class="popup-icon" id="popIcon">🧴</div>
+  <div class="popup-title" id="popTitle"></div>
+  <div class="popup-desc" id="popDesc"></div>
+  <div class="popup-why" id="popWhy"></div>
+  <button class="popup-btn" id="popBtn" onclick="confirmMoment()">🧴 手指消毒する</button>
+</div>
+
+<!-- ══ COMPLETION ══ -->
+<div id="completion">
+  <div style="font-size:56px;margin-bottom:12px;animation:emBounce 0.6s ease">🏆</div>
+  <div class="comp-title">5モーメント制覇！</div>
+  <div class="comp-sub">すべての手指衛生タイミングを学習しました</div>
+  <div class="moments-summary" id="momentsSummary"></div>
+  <button class="comp-restart" onclick="restartGame()">🔄 もう一度</button>
+  <div style="font-size:10px;color:rgba(255,255,255,0.3);text-align:center;line-height:1.6;max-width:300px">
+    本テキストは AI（Claude, Anthropic）を用いて作成されました。<br>
+    医療上の判断には必ず公式文献・専門家の指導を参照してください。
+  </div>
+</div>
+
+<!-- ══ INTRO ══ -->
+<div id="intro">
+  <div class="intro-title">WHO 5 MOMENTS</div>
+  <div class="intro-sub">FOR HAND HYGIENE — 360° VR</div>
+  <div class="who-badge">
+    <p>病室を360°見渡して、手指衛生が必要な<br><strong>5つのタイミング（モーメント）</strong>を発見しよう。<br>光っている場所を見つけてタップ！</p>
+  </div>
+  <div class="moment-list">
+    <div class="ml-item"><div class="ml-n">1</div>患者に触れる前</div>
+    <div class="ml-item"><div class="ml-n">2</div>清潔/無菌操作の前</div>
+    <div class="ml-item"><div class="ml-n">3</div>体液に暴露された後</div>
+    <div class="ml-item"><div class="ml-n">4</div>患者に触れた後</div>
+    <div class="ml-item"><div class="ml-n">5</div>患者周辺環境に触れた後</div>
+  </div>
+  <button class="intro-start" onclick="startApp()">🔍 探索を開始する</button>
+  <div class="intro-note">
+    スマートフォンを傾けると視点が変わります（ジャイロ対応端末）<br>
+    PCではマウスドラッグで視点を操作できます
+  </div>
+</div>
+
+<!-- ══ FOOTER ══ -->
+<div id="footerNote">
+  本テキストは AI（Claude, Anthropic）を用いて作成されました。内容には誤りが含まれる可能性があります。医療上の判断には必ず公式の教科書・文献・専門家の指導を参照してください。二次利用・再配布は自己責任のもとで可能です。本注記の保持を推奨します。
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// WHO 5 MOMENTS DATA
+// ════════════════════════════════════════════════════════
+const MOMENTS = [
+  {
+    id: 1,
+    title: '患者に触れる前',
+    icon: '🤝',
+    color: [0, 255, 180],
+    // Position in 360 scene: azimuth (0-360 deg), elevation (-40 to 40)
+    az: 30, el: 0,
+    scene: 'bed',   // what's drawn nearby
+    desc: '患者の身体に触れる直前に手指消毒を行います。患者のベッドサイドに立ち、触れる前が対象です。',
+    why: '💡 あなたの手に付着した微生物から患者を守ります。特に免疫が低下した患者へのケアの前は必須です。',
+    example: '例：握手、脈拍測定、体位変換を行う前など'
+  },
+  {
+    id: 2,
+    title: '清潔/無菌操作の前',
+    icon: '💉',
+    color: [0, 180, 255],
+    az: 130, el: 5,
+    scene: 'iv',
+    desc: '注射・点滴・採血・カテーテル操作など、清潔または無菌操作を行う直前に手指消毒します。',
+    why: '💡 侵襲的処置は感染リスクが高い。微生物が器材や患者の体内に入らないよう消毒が必要です。',
+    example: '例：点滴ポートへのアクセス前、導尿カテーテル挿入前など'
+  },
+  {
+    id: 3,
+    title: '体液に暴露された後',
+    icon: '⚠️',
+    color: [255, 80, 80],
+    az: 220, el: -5,
+    scene: 'waste',
+    desc: '血液・分泌物・排泄物・粘膜などの体液に触れた可能性がある直後に手指消毒します。',
+    why: '💡 あなた自身を感染から守り、他の患者・スタッフへの微生物の伝播を防ぎます。',
+    example: '例：採血後、喀痰吸引後、おむつ交換後など'
+  },
+  {
+    id: 4,
+    title: '患者に触れた後',
+    icon: '🙌',
+    color: [255, 200, 0],
+    az: 310, el: 0,
+    scene: 'patient',
+    desc: '患者の身体に触れた後、患者のベッドサイドを離れる前に手指消毒を行います。',
+    why: '💡 患者の微生物があなたの手を介して環境や他の患者に広がることを防ぎます。',
+    example: '例：患者の手を握った後、体温測定後、体を拭いた後など'
+  },
+  {
+    id: 5,
+    title: '患者周辺環境に触れた後',
+    icon: '🪑',
+    color: [180, 100, 255],
+    az: 190, el: 15,
+    scene: 'surface',
+    desc: '患者の周辺にある物（ベッド柵・ナースコール・床頭台など）に触れた後に手指消毒します。',
+    why: '💡 患者周辺の環境は微生物で汚染されていることがあります。触れた後の消毒で伝播を防ぎます。',
+    example: '例：ベッド柵を上げた後、ナースコールを手渡した後など'
+  }
+];
+
+// ════════════════════════════════════════════════════════
+// CANVAS & RENDER
+// ════════════════════════════════════════════════════════
+const canvas = document.getElementById('vrCanvas');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Camera state
+let camAz = 0;   // horizontal rotation (degrees)
+let camEl = 0;   // vertical tilt (degrees)
+let running = false;
+
+// ── DRAW ROOM ──────────────────────────────────────────
+function drawRoom(az, el) {
+  ctx.clearRect(0, 0, W, H);
+
+  // Sky/ceiling gradient
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.45);
+  skyGrad.addColorStop(0, '#0a1628');
+  skyGrad.addColorStop(1, '#0d2040');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, H * 0.45);
+
+  // Floor gradient
+  const floorGrad = ctx.createLinearGradient(0, H * 0.55, 0, H);
+  floorGrad.addColorStop(0, '#0c1c10');
+  floorGrad.addColorStop(1, '#060e08');
+  ctx.fillStyle = floorGrad;
+  ctx.fillRect(0, H * 0.55, W, H * 0.45);
+
+  // Mid band (wall)
+  const wallGrad = ctx.createLinearGradient(0, H * 0.3, 0, H * 0.7);
+  wallGrad.addColorStop(0, '#0d2040');
+  wallGrad.addColorStop(0.4, '#0f2848');
+  wallGrad.addColorStop(0.6, '#0c1c10');
+  wallGrad.addColorStop(1, '#0a1810');
+  ctx.fillStyle = wallGrad;
+  ctx.fillRect(0, H * 0.3, W, H * 0.4);
+
+  // Horizon line
+  const horizY = H * 0.5 - (el / 45) * H * 0.15;
+
+  // Floor grid (perspective)
+  drawFloorGrid(horizY, az);
+
+  // Ceiling grid
+  drawCeilingGrid(horizY, az);
+
+  // Room elements
+  drawRoomElements(az, el, horizY);
+}
+
+function drawFloorGrid(horizY, az) {
+  const offset = (az % 30) / 30;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0,255,100,0.08)';
+  ctx.lineWidth = 1;
+  // Perspective lines from vanishing point
+  const vx = W / 2 - (((az % 360) / 360) * W * 0.3);
+  const vy = horizY;
+  const numLines = 18;
+  for (let i = 0; i <= numLines; i++) {
+    const x = (i / numLines) * W;
+    ctx.beginPath();
+    ctx.moveTo(vx, vy);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+  // Horizontal floor lines
+  for (let d = 0; d < 8; d++) {
+    const t = (d + offset) / 8;
+    const y = horizY + (H - horizY) * (t * t * 2);
+    if (y > horizY && y < H) {
+      ctx.globalAlpha = 0.04 + t * 0.06;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawCeilingGrid(horizY, az) {
+  const offset = (az % 40) / 40;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(100,180,255,0.05)';
+  ctx.lineWidth = 1;
+  const vx = W / 2 - (((az % 360) / 360) * W * 0.3);
+  const vy = horizY;
+  const numLines = 14;
+  for (let i = 0; i <= numLines; i++) {
+    const x = (i / numLines) * W;
+    ctx.beginPath();
+    ctx.moveTo(vx, vy);
+    ctx.lineTo(x, 0);
+    ctx.stroke();
+  }
+  for (let d = 0; d < 6; d++) {
+    const t = (d + offset) / 6;
+    const y = horizY - (horizY) * (t * t * 1.8);
+    if (y < horizY && y > 0) {
+      ctx.globalAlpha = 0.03 + t * 0.04;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawRoomElements(az, el, horizY) {
+  // Draw ambient room geometry based on camera angle
+  // Hospital bed silhouette (center-ish)
+  const bedAz = 10;
+  const bedX = azToX(bedAz, az);
+  if (bedX > -100 && bedX < W + 100) {
+    drawBed(bedX, horizY);
+  }
+
+  // IV stand
+  const ivX = azToX(120, az);
+  if (ivX > -60 && ivX < W + 60) {
+    drawIVStand(ivX, horizY);
+  }
+
+  // Waste bin
+  const binX = azToX(210, az);
+  if (binX > -60 && binX < W + 60) {
+    drawWasteBin(binX, horizY);
+  }
+
+  // Door
+  const doorX = azToX(280, az);
+  if (doorX > -80 && doorX < W + 80) {
+    drawDoor(doorX, horizY);
+  }
+
+  // Surface/table
+  const tableX = azToX(185, az);
+  if (tableX > -80 && tableX < W + 80) {
+    drawTable(tableX, horizY);
+  }
+
+  // Light fixtures
+  for (let la = 0; la < 360; la += 90) {
+    const lx = azToX(la, az);
+    if (lx > -30 && lx < W + 30) {
+      drawLight(lx, horizY * 0.15);
+    }
+  }
+}
+
+function azToX(targetAz, currentAz) {
+  let diff = targetAz - currentAz;
+  while (diff > 180) diff -= 360;
+  while (diff < -180) diff += 360;
+  return W / 2 + (diff / 120) * W;
+}
+
+function drawBed(x, horizY) {
+  const s = 1.0;
+  ctx.save();
+  // Mattress
+  ctx.fillStyle = '#1a3a5c';
+  ctx.fillRect(x - 80*s, horizY - 10*s, 160*s, 40*s);
+  // Frame
+  ctx.strokeStyle = '#2a5080';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x - 80*s, horizY - 10*s, 160*s, 40*s);
+  // Pillow
+  ctx.fillStyle = '#2a4a6a';
+  ctx.fillRect(x - 65*s, horizY - 8*s, 50*s, 20*s);
+  // Headboard
+  ctx.fillStyle = '#1a3a5c';
+  ctx.fillRect(x - 82*s, horizY - 30*s, 12*s, 60*s);
+  // Bed rails
+  ctx.strokeStyle = 'rgba(100,160,220,0.5)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(x - 70*s, horizY - 12*s);
+  ctx.lineTo(x - 70*s, horizY + 32*s);
+  ctx.moveTo(x + 70*s, horizY - 12*s);
+  ctx.lineTo(x + 70*s, horizY + 32*s);
+  ctx.stroke();
+  // Blanket
+  ctx.fillStyle = 'rgba(40,80,120,0.7)';
+  ctx.fillRect(x - 65*s, horizY, 130*s, 28*s);
+  ctx.restore();
+}
+
+function drawIVStand(x, horizY) {
+  ctx.save();
+  ctx.strokeStyle = '#2a6080';
+  ctx.lineWidth = 3;
+  // Pole
+  ctx.beginPath();
+  ctx.moveTo(x, horizY + 40);
+  ctx.lineTo(x, horizY - 80);
+  ctx.stroke();
+  // Hook
+  ctx.beginPath();
+  ctx.moveTo(x - 15, horizY - 75);
+  ctx.lineTo(x + 15, horizY - 75);
+  ctx.stroke();
+  // IV bag
+  ctx.fillStyle = 'rgba(100,200,255,0.25)';
+  ctx.strokeStyle = 'rgba(100,200,255,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(x - 14, horizY - 72, 28, 36, 4);
+  ctx.fill();
+  ctx.stroke();
+  // Drip line
+  ctx.strokeStyle = 'rgba(100,200,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x, horizY - 36);
+  ctx.lineTo(x, horizY);
+  ctx.stroke();
+  // Base
+  ctx.fillStyle = '#1a4060';
+  ctx.fillRect(x - 20, horizY + 38, 40, 8);
+  ctx.restore();
+}
+
+function drawWasteBin(x, horizY) {
+  ctx.save();
+  ctx.fillStyle = '#2a1a00';
+  ctx.strokeStyle = '#ff6600';
+  ctx.lineWidth = 1.5;
+  // Bin body
+  ctx.beginPath();
+  ctx.moveTo(x - 18, horizY + 50);
+  ctx.lineTo(x - 14, horizY + 10);
+  ctx.lineTo(x + 14, horizY + 10);
+  ctx.lineTo(x + 18, horizY + 50);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Lid
+  ctx.fillStyle = '#3a2a00';
+  ctx.fillRect(x - 16, horizY + 6, 32, 6);
+  // Biohazard text
+  ctx.fillStyle = 'rgba(255,100,0,0.6)';
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('☣', x, horizY + 36);
+  ctx.restore();
+}
+
+function drawDoor(x, horizY) {
+  ctx.save();
+  const h = 100, w = 54;
+  ctx.fillStyle = '#0d2a1a';
+  ctx.strokeStyle = '#1a4030';
+  ctx.lineWidth = 2;
+  ctx.fillRect(x - w/2, horizY - h * 0.7, w, h);
+  ctx.strokeRect(x - w/2, horizY - h * 0.7, w, h);
+  // Window
+  ctx.strokeStyle = 'rgba(100,200,150,0.3)';
+  ctx.fillStyle = 'rgba(100,200,150,0.06)';
+  ctx.fillRect(x - 12, horizY - h*0.55, 24, 20);
+  ctx.strokeRect(x - 12, horizY - h*0.55, 24, 20);
+  // Handle
+  ctx.fillStyle = '#2a6040';
+  ctx.beginPath();
+  ctx.arc(x + 18, horizY - h*0.25, 4, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawTable(x, horizY) {
+  ctx.save();
+  // Tabletop
+  ctx.fillStyle = '#1a3a2a';
+  ctx.strokeStyle = '#2a5a3a';
+  ctx.lineWidth = 1.5;
+  ctx.fillRect(x - 50, horizY - 5, 100, 10);
+  ctx.strokeRect(x - 50, horizY - 5, 100, 10);
+  // Legs
+  ctx.strokeStyle = '#1a4030';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(x - 38, horizY + 5);
+  ctx.lineTo(x - 38, horizY + 40);
+  ctx.moveTo(x + 38, horizY + 5);
+  ctx.lineTo(x + 38, horizY + 40);
+  ctx.stroke();
+  // Items on table
+  ctx.fillStyle = 'rgba(200,230,255,0.15)';
+  ctx.fillRect(x - 20, horizY - 18, 14, 13);
+  ctx.fillStyle = 'rgba(255,200,100,0.2)';
+  ctx.beginPath();
+  ctx.arc(x + 20, horizY - 10, 7, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawLight(x, y) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(200,220,255,0.6)';
+  ctx.fillRect(x - 20, y, 40, 6);
+  // Glow
+  const g = ctx.createRadialGradient(x, y+3, 0, x, y+3, 60);
+  g.addColorStop(0, 'rgba(200,220,255,0.08)');
+  g.addColorStop(1, 'transparent');
+  ctx.fillStyle = g;
+  ctx.fillRect(x - 60, y, 120, 80);
+  ctx.restore();
+}
+
+// ════════════════════════════════════════════════════════
+// MOMENT HOTSPOTS
+// ════════════════════════════════════════════════════════
+const state = {
+  found: new Set(),
+  activeMoment: null,
+  gameStarted: false,
+  time: 0,
+};
+
+let hotspots = []; // {moment, x, y, r, pulse}
+
+function updateHotspots(az, el, horizY) {
+  hotspots = MOMENTS.map(m => {
+    const x = azToX(m.az, az);
+    const elOffset = (m.el - el);
+    const y = horizY - elOffset * (H * 0.006);
+    return { moment: m, x, y, r: 28, visible: x > -60 && x < W + 60 };
+  });
+}
+
+function drawHotspots(t) {
+  hotspots.forEach(hs => {
+    if (!hs.visible) return;
+    if (state.found.has(hs.moment.id)) {
+      // Already found — draw checkmark
+      drawFoundMark(hs.x, hs.y);
+      return;
+    }
+
+    const [r, g, b] = hs.moment.color;
+    const pulse = (Math.sin(t * 0.003 + hs.moment.id) + 1) / 2;
+    const outerR = hs.r + 10 + pulse * 12;
+
+    // Outer glow ring
+    const glowGrad = ctx.createRadialGradient(hs.x, hs.y, 0, hs.x, hs.y, outerR + 20);
+    glowGrad.addColorStop(0, `rgba(${r},${g},${b},${0.25 + pulse * 0.2})`);
+    glowGrad.addColorStop(0.6, `rgba(${r},${g},${b},0.08)`);
+    glowGrad.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.arc(hs.x, hs.y, outerR + 20, 0, Math.PI * 2);
+    ctx.fillStyle = glowGrad;
+    ctx.fill();
+
+    // Pulsing ring
+    ctx.beginPath();
+    ctx.arc(hs.x, hs.y, outerR, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(${r},${g},${b},${0.3 + pulse * 0.4})`;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Core circle
+    const coreGrad = ctx.createRadialGradient(hs.x - 5, hs.y - 5, 0, hs.x, hs.y, hs.r);
+    coreGrad.addColorStop(0, `rgba(${r},${g},${b},0.95)`);
+    coreGrad.addColorStop(1, `rgba(${Math.floor(r*0.5)},${Math.floor(g*0.5)},${Math.floor(b*0.5)},0.8)`);
+    ctx.beginPath();
+    ctx.arc(hs.x, hs.y, hs.r, 0, Math.PI * 2);
+    ctx.fillStyle = coreGrad;
+    ctx.fill();
+
+    // Inner ring
+    ctx.beginPath();
+    ctx.arc(hs.x, hs.y, hs.r - 2, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,255,255,0.4)`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Icon
+    ctx.font = '20px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(hs.moment.icon, hs.x, hs.y - 2);
+
+    // Number badge
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.beginPath();
+    ctx.arc(hs.x + 18, hs.y - 18, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 10px Space Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(hs.moment.id, hs.x + 18, hs.y - 18);
+    ctx.restore();
+
+    // Tap hint
+    if (pulse > 0.85) {
+      ctx.save();
+      ctx.globalAlpha = (pulse - 0.85) / 0.15;
+      ctx.fillStyle = `rgba(${r},${g},${b},0.9)`;
+      ctx.font = `bold 10px 'Noto Sans JP', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('タップ！', hs.x, hs.y + hs.r + 6);
+      ctx.restore();
+    }
+  });
+}
+
+function drawFoundMark(x, y) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, 22, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,255,150,0.12)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,255,150,0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.font = '18px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('✓', x, y);
+  ctx.restore();
+}
+
+// Crosshair
+function drawCrosshair() {
+  const cx = W/2, cy = H/2;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(cx - 15, cy); ctx.lineTo(cx + 15, cy);
+  ctx.moveTo(cx, cy - 15); ctx.lineTo(cx, cy + 15);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.arc(cx, cy, 4, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.fill();
+  ctx.restore();
+}
+
+// ════════════════════════════════════════════════════════
+// RENDER LOOP
+// ════════════════════════════════════════════════════════
+function renderLoop(t) {
+  if (!running) return;
+  state.time = t;
+
+  const horizY = H * 0.5 - (camEl / 45) * H * 0.15;
+  drawRoom(camAz, camEl);
+  updateHotspots(camAz, camEl, horizY);
+  drawHotspots(t);
+  drawCrosshair();
+
+  updateProgressDots();
+  requestAnimationFrame(renderLoop);
+}
+
+// ════════════════════════════════════════════════════════
+// INPUT — DRAG (mouse + touch)
+// ════════════════════════════════════════════════════════
+let drag = { active: false, lastX: 0, lastY: 0 };
+
+canvas.addEventListener('mousedown', e => {
+  drag.active = true;
+  drag.lastX = e.clientX;
+  drag.lastY = e.clientY;
+});
+window.addEventListener('mousemove', e => {
+  if (!drag.active) return;
+  const dx = e.clientX - drag.lastX;
+  const dy = e.clientY - drag.lastY;
+  camAz = (camAz - dx * 0.3 + 360) % 360;
+  camEl = Math.max(-30, Math.min(30, camEl + dy * 0.2));
+  drag.lastX = e.clientX;
+  drag.lastY = e.clientY;
+});
+window.addEventListener('mouseup', () => { drag.active = false; });
+
+let touch = { active: false, lastX: 0, lastY: 0, isTap: false, startX: 0, startY: 0 };
+
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    touch.active = true;
+    touch.lastX = touch.startX = e.touches[0].clientX;
+    touch.lastY = touch.startY = e.touches[0].clientY;
+    touch.isTap = true;
+  }
+}, { passive: true });
+
+canvas.addEventListener('touchmove', e => {
+  if (!touch.active || e.touches.length !== 1) return;
+  const dx = e.touches[0].clientX - touch.lastX;
+  const dy = e.touches[0].clientY - touch.lastY;
+  const totalDx = Math.abs(e.touches[0].clientX - touch.startX);
+  const totalDy = Math.abs(e.touches[0].clientY - touch.startY);
+  if (totalDx > 6 || totalDy > 6) touch.isTap = false;
+  if (!gyroActive) {
+    camAz = (camAz - dx * 0.4 + 360) % 360;
+    camEl = Math.max(-30, Math.min(30, camEl + dy * 0.25));
+  }
+  touch.lastX = e.touches[0].clientX;
+  touch.lastY = e.touches[0].clientY;
+}, { passive: true });
+
+canvas.addEventListener('touchend', e => {
+  if (touch.isTap && touch.active) {
+    handleTap(touch.startX, touch.startY);
+  }
+  touch.active = false;
+});
+
+canvas.addEventListener('click', e => {
+  handleTap(e.clientX, e.clientY);
+});
+
+function handleTap(x, y) {
+  if (!state.gameStarted) return;
+  if (document.getElementById('popup').classList.contains('show')) return;
+
+  // Check hotspot hit
+  for (const hs of hotspots) {
+    if (!hs.visible) continue;
+    if (state.found.has(hs.moment.id)) continue;
+    const dist = Math.hypot(x - hs.x, y - hs.y);
+    if (dist < hs.r + 16) {
+      openPopup(hs.moment);
+      return;
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// GYROSCOPE
+// ════════════════════════════════════════════════════════
+let gyroActive = false;
+let gyroBaseAlpha = null;
+let gyroBeta = 0, gyroGamma = 0;
+
+function initGyro() {
+  if (typeof DeviceOrientationEvent === 'undefined') return;
+
+  const requestFn = (typeof DeviceOrientationEvent.requestPermission === 'function')
+    ? DeviceOrientationEvent.requestPermission
+    : null;
+
+  if (requestFn) {
+    // iOS 13+ needs permission
+    document.addEventListener('touchstart', async function iosPermission() {
+      try {
+        const perm = await DeviceOrientationEvent.requestPermission();
+        if (perm === 'granted') listenGyro();
+      } catch(e) {}
+      document.removeEventListener('touchstart', iosPermission);
+    }, { once: true });
+  } else {
+    listenGyro();
+  }
+}
+
+function listenGyro() {
+  window.addEventListener('deviceorientation', e => {
+    if (e.alpha === null) return;
+    gyroActive = true;
+
+    if (gyroBaseAlpha === null) gyroBaseAlpha = e.alpha;
+
+    let da = e.alpha - gyroBaseAlpha;
+    if (da < 0) da += 360;
+    // On mobile landscape vs portrait adjust
+    camAz = (360 - da) % 360;
+    camEl = Math.max(-30, Math.min(30, -(e.beta - 60) * 0.5));
+
+    const badge = document.getElementById('gyroBadge');
+    badge.textContent = '📱 ジャイロ ON';
+    badge.classList.remove('inactive');
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// POPUP
+// ════════════════════════════════════════════════════════
+function openPopup(moment) {
+  state.activeMoment = moment;
+  const [r, g, b] = moment.color;
+
+  document.getElementById('popNum').textContent = `MOMENT ${moment.id} / 5`;
+  document.getElementById('popIcon').textContent = moment.icon;
+  document.getElementById('popTitle').textContent = moment.title;
+  document.getElementById('popDesc').textContent = moment.desc + ' ' + moment.example;
+  document.getElementById('popWhy').textContent = moment.why;
+
+  const popup = document.getElementById('popup');
+  popup.style.borderColor = `rgba(${r},${g},${b},0.6)`;
+  popup.style.boxShadow = `0 0 40px rgba(${r},${g},${b},0.15), 0 20px 60px rgba(0,0,0,0.6)`;
+
+  const btn = document.getElementById('popBtn');
+  btn.style.background = `rgb(${r},${g},${b})`;
+  btn.style.color = (r + g + b > 400) ? '#000' : '#fff';
+
+  popup.classList.add('show');
+}
+
+function closePopup() {
+  document.getElementById('popup').classList.remove('show');
+  state.activeMoment = null;
+}
+
+function confirmMoment() {
+  if (!state.activeMoment) return;
+  const m = state.activeMoment;
+  state.found.add(m.id);
+  closePopup();
+
+  // Flash effect
+  const flashDiv = document.createElement('div');
+  flashDiv.style.cssText = `position:fixed;inset:0;background:rgba(0,255,180,0.18);z-index:200;pointer-events:none;animation:flashFade 0.5s ease forwards;`;
+  document.head.insertAdjacentHTML('beforeend', `<style>@keyframes flashFade{to{opacity:0}}</style>`);
+  document.body.appendChild(flashDiv);
+  setTimeout(() => flashDiv.remove(), 500);
+
+  updateProgressDots();
+  document.getElementById('foundCount').textContent = state.found.size;
+
+  if (state.found.size === 5) {
+    setTimeout(showCompletion, 600);
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// UI
+// ════════════════════════════════════════════════════════
+function updateProgressDots() {
+  const el = document.getElementById('progressDots');
+  el.innerHTML = MOMENTS.map(m => {
+    const cls = state.found.has(m.id) ? 'pdot done' : 'pdot';
+    return `<div class="${cls}" title="Moment ${m.id}"></div>`;
+  }).join('');
+}
+
+function showCompletion() {
+  running = false;
+  const el = document.getElementById('completion');
+  document.getElementById('momentsSummary').innerHTML = MOMENTS.map(m =>
+    `<div class="ms-row">
+      <div class="ms-num">${m.id}</div>
+      <div class="ms-icon">${m.icon}</div>
+      <div class="ms-name">${m.title}</div>
+      <div class="ms-check">✅</div>
+    </div>`
+  ).join('');
+  el.classList.add('show');
+}
+
+function restartGame() {
+  state.found.clear();
+  state.activeMoment = null;
+  camAz = 0; camEl = 0;
+  gyroBaseAlpha = null;
+  document.getElementById('completion').classList.remove('show');
+  document.getElementById('foundCount').textContent = '0';
+  updateProgressDots();
+  running = true;
+  requestAnimationFrame(renderLoop);
+}
+
+function startApp() {
+  document.getElementById('intro').style.display = 'none';
+  state.gameStarted = true;
+  running = true;
+  updateProgressDots();
+  requestAnimationFrame(renderLoop);
+  initGyro();
+
+  // Show drag hint
+  const hint = document.createElement('div');
+  hint.className = 'drag-hint';
+  hint.textContent = '📱 端末を傾けるか、ドラッグして360°見まわそう';
+  document.getElementById('hud').appendChild(hint);
+  setTimeout(() => hint.remove(), 3500);
+}
+
+// Init dots
+updateProgressDots();
+</script>
+</body>
+</html>
