@@ -636,17 +636,26 @@ async function takePhoto(){
   const dw=vNatW*scale, dh=vNatH*scale;
   ctx.drawImage(video,(vw-dw)/2,(vh-dh)/2,dw,dh);
 
-  // draw charas from DOM positions
+  // draw charas from DOM positions (object-fit:contain 相当でアスペクト比保持)
   const els=document.querySelectorAll('.ar-chara');
   for(const el of els){
-    const x=parseFloat(el.style.left), y=parseFloat(el.style.top);
-    const sz=parseFloat(el.style.width);
+    const boxX=parseFloat(el.style.left), boxY=parseFloat(el.style.top);
+    const boxW=parseFloat(el.style.width), boxH=parseFloat(el.style.height);
     const id=el.dataset.id;
     const chara=CHARAS.find(c=>c.id===id);
     if(!chara)continue;
     await new Promise(resolve=>{
       const img=new Image(); img.crossOrigin='anonymous';
-      img.onload=()=>{ctx.drawImage(img,x,y,sz,sz);resolve();};
+      img.onload=()=>{
+        const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height;
+        if(!iw||!ih){ctx.drawImage(img,boxX,boxY,boxW,boxH);resolve();return;}
+        // object-fit:contain: scale to fit inside box, center
+        const scale=Math.min(boxW/iw, boxH/ih);
+        const dw=iw*scale, dh=ih*scale;
+        const dx=boxX+(boxW-dw)/2, dy=boxY+(boxH-dh)/2;
+        ctx.drawImage(img,dx,dy,dw,dh);
+        resolve();
+      };
       img.onerror=resolve;
       img.src=chara.url+'?t='+Date.now();
     });
