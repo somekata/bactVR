@@ -1,324 +1,1297 @@
 <!DOCTYPE html>
 <html lang="ja">
-  <head>
-    <meta charset="UTF-8" />
-    <title>bactVR PPE Room</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- A-Frame 本体 -->
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aframe-rounded@3.0.1/dist/aframe-rounded.min.js"></script>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <header class="site-header">
-      <h1>bactVR / PPE Training Room</h1>
-      <p class="subtitle">
-        パネルをタップして PPE を装着・脱衣し、正しい順番を確認するミニVR
-      </p>
-    </header>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>PPE着脱トレーニング</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap');
 
-    <main class="layout">
-      <!-- 左：VR空間 -->
-      <section class="panel panel-vr">
-        <div class="vr-wrapper">
-          <a-scene
-            embedded
-            renderer="antialias: true"
-            vr-mode-ui="enabled: false"
-            cursor="rayOrigin: mouse"
-            raycaster="objects: .clickable"
-          >
-            <!-- 画像アセット -->
-            <a-assets>
-              <img id="img-manekin" src="assets/manekin.png" />
-              <img id="img-gown" src="assets/gown.png" />
-              <img id="img-mask" src="assets/mask.png" />
-              <img id="img-goggle" src="assets/goggle.png" />
-              <img id="img-gloveL" src="assets/gloveL.png" />
-              <img id="img-gloveR" src="assets/gloveR.png" />
-            </a-assets>
+/* ── RESET & BASE ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; }
 
-            <!-- 環境光＆床・壁 -->
-            <a-entity
-              light="type: ambient; color: #ffffff; intensity: 0.9"
-            ></a-entity>
-            <a-entity
-              light="type: directional; color: #ffffff; intensity: 0.4"
-              position="2 3 1"
-            ></a-entity>
+:root {
+  --bg: #f2f5f9;
+  --surface: #ffffff;
+  --card: #f8fafc;
+  --border: #e2e8f0;
+  --accent: #0060e6;
+  --accent-light: #e8f0ff;
+  --success: #059669;
+  --error: #dc2626;
+  --warning: #d97706;
+  --text: #1e293b;
+  --muted: #94a3b8;
+  --tab-h: 56px;
+  --header-h: 52px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
 
-            <a-plane
-              position="0 0 -3"
-              rotation="-90 0 0"
-              width="8"
-              height="8"
-              color="#e0e0e0"
-            ></a-plane>
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
 
-            <a-box
-              position="0 2 -6"
-              depth="0.2"
-              height="4"
-              width="8"
-              color="#cfd8dc"
-            ></a-box>
+/* ── HEADER ── */
+header {
+  height: var(--header-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  position: relative;
+  z-index: 10;
+}
+.logo {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.header-pills { display: flex; gap: 8px; align-items: center; }
+.pill {
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.pill-score { background: #fef9c3; border: 1px solid #fde047; color: #854d0e; }
+.pill-streak { background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; display: none; }
+.pill-streak.visible { display: block; }
 
-            <!-- マネキン＋PPE -->
-            <a-entity id="avatar" position="0 0 -3">
-              <!-- ベースのマネキン -->
-              <a-image
-                id="base-manekin"
-                src="#img-manekin"
-                position="0 1.6 0"
-                scale="1.4 1.4 1"
-              ></a-image>
+/* ── CONTENT AREA ── */
+.content-area {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
 
-              <!-- ガウン -->
-              <a-image
-                id="ppe-gown"
-                src="#img-gown"
-                visible="false"
-                class="ppe-clickable clickable"
-                position="0.01 1.3 0.01"
-                scale="1.15 1.1 1"
-              ></a-image>
+/* ── TAB PANELS ── */
+.tab-panel {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: none;
+  flex-direction: column;
+}
+.tab-panel.active { display: flex; }
 
-              <!-- マスク -->
-              <a-image
-                id="ppe-mask"
-                src="#img-mask"
-                visible="false"
-                class="ppe-clickable clickable"
-                position="0 1.9 0.02"
-                scale="0.4 0.2 1"
-              ></a-image>
+/* ── BOTTOM TABS ── */
+.bottom-tabs {
+  height: calc(var(--tab-h) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-shrink: 0;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.06);
+}
+.tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  transition: color 0.18s;
+  padding: 6px 4px 0;
+}
+.tab-btn.active { color: var(--accent); }
+.tab-btn .tab-icon { font-size: 22px; line-height: 1; }
+.tab-btn .tab-label { font-size: 10px; font-weight: 700; letter-spacing: 0.3px; }
 
-              <!-- ゴーグル -->
-              <a-image
-                id="ppe-goggle"
-                src="#img-goggle"
-                visible="false"
-                class="ppe-clickable clickable"
-                position="0 2.0 0.03"
-                scale="0.4 0.2 1"
-              ></a-image>
+/* ═══════════════════════════════════
+   PLAY TAB
+═══════════════════════════════════ */
 
-              <!-- 手袋 左右 -->
-              <a-image
-                id="ppe-gloveR"
-                src="#img-gloveR"
-                visible="false"
-                class="ppe-clickable clickable"
-                position="-0.55 1.2 0.02"
-                scale="0.4 0.4 1"
-              ></a-image>
-              <a-image
-                id="ppe-gloveL"
-                src="#img-gloveL"
-                visible="false"
-                class="ppe-clickable clickable"
-                position="0.55 1.2 0.02"
-                scale="0.4 0.4 1"
-              ></a-image>
-            </a-entity>
+/* HOME (mode select) */
+.play-home {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  gap: 0;
+}
+.play-home-title { font-size: 20px; font-weight: 900; text-align: center; letter-spacing: -0.3px; margin-bottom: 4px; }
+.play-home-sub { font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 24px; }
+.mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  max-width: 380px;
+}
+.mode-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 18px;
+  padding: 20px 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.18s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.mode-card:hover, .mode-card:focus { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,96,230,0.12); outline: none; }
+.mode-card:active { transform: scale(0.97); }
+.mc-icon { font-size: 32px; display: block; margin-bottom: 8px; }
+.mc-title { font-size: 14px; font-weight: 700; }
+.mc-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-            <!-- PPE パネル（右側の棚） -->
-            <a-entity id="panel-shelf" position="1.8 1.6 -3">
-              <!-- アルコール -->
-              <a-plane
-                id="panel-alcohol"
-                class="panel-clickable clickable"
-                position="0 0.9 0"
-                width="1.2"
-                height="0.5"
-                color="#ffffff"
-                material="shader: flat; opacity: 0.98"
-                shadow="cast: true; receive: false"
-                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
-              ></a-plane>
-              <a-text
-                id="label-alcohol"
-                value="🧴 ALCOHOL"
-                align="center"
-                width="4"
-                color="#1565c0"
-                position="0 0.9 0.01"
-              ></a-text>
+/* GAME SCREEN */
+.play-game { flex: 1; display: none; flex-direction: column; }
+.play-game.visible { display: flex; }
 
-              <!-- ガウン -->
-              <a-plane
-                id="panel-gown"
-                class="panel-clickable clickable"
-                position="0 0.45 0"
-                width="1.2"
-                height="0.5"
-                color="#bbdefb"
-                material="shader: flat; opacity: 0.98"
-                shadow="cast: true; receive: false"
-                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
-              ></a-plane>
-              <a-text
-                id="label-gown"
-                value="🧥 GOWN"
-                align="center"
-                width="4"
-                color="#0d47a1"
-                position="0 0.45 0.01"
-              ></a-text>
+.mode-banner {
+  background: var(--accent);
+  color: white;
+  text-align: center;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  flex-shrink: 0;
+}
+.mode-banner.doffing { background: #7c3aed; }
 
-              <!-- マスク -->
-              <a-plane
-                id="panel-mask"
-                class="panel-clickable clickable"
-                position="0 0 0"
-                width="1.2"
-                height="0.5"
-                color="#c8e6c9"
-                material="shader: flat; opacity: 0.98"
-                shadow="cast: true; receive: false"
-                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
-              ></a-plane>
-              <a-text
-                id="label-mask"
-                value="😷 MASK"
-                align="center"
-                width="4"
-                color="#1b5e20"
-                position="0 0 0.01"
-              ></a-text>
+.prog-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.prog-track { flex: 1; height: 5px; background: var(--border); border-radius: 999px; overflow: hidden; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #60a5fa); border-radius: 999px; transition: width 0.45s cubic-bezier(0.4,0,0.2,1); }
+.prog-text { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); white-space: nowrap; }
 
-              <!-- ゴーグル -->
-              <a-plane
-                id="panel-goggle"
-                class="panel-clickable clickable"
-                position="0 -0.45 0"
-                width="1.2"
-                height="0.5"
-                color="#e1f5fe"
-                material="shader: flat; opacity: 0.98"
-                shadow="cast: true; receive: false"
-                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
-              ></a-plane>
-              <a-text
-                id="label-goggle"
-                value="🥽 GOGGLES"
-                align="center"
-                width="4"
-                color="#01579b"
-                position="0 -0.45 0.01"
-              ></a-text>
+.game-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
 
-              <!-- 手袋 -->
-              <a-plane
-                id="panel-gloves"
-                class="panel-clickable clickable"
-                position="0 -0.9 0"
-                width="1.2"
-                height="0.5"
-                color="#f3e5f5"
-                material="shader: flat; opacity: 0.98"
-                shadow="cast: true; receive: false"
-                animation__hover="property: scale; dir: alternate; dur: 800; loop: true; to: 1.05 1.05 1.05"
-              ></a-plane>
-              <a-text
-                id="label-gloves"
-                value="🧤 GLOVES"
-                align="center"
-                width="4"
-                color="#6a1b9a"
-                position="0 -0.9 0.01"
-              ></a-text>
-            </a-entity>
+/* MANNEQUIN */
+.mannequin-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 14px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+}
+.mcard-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; }
 
-            <!-- カメラ（固定） -->
-            <a-entity position="0 1.6 0">
-              <a-entity camera look-controls="enabled: false"></a-entity>
-            </a-entity>
-          </a-scene>
+.svg-wrap {
+  width: 160px;
+  height: 232px;
+  position: relative;
+  flex-shrink: 0;
+}
+.svg-wrap svg { width: 100%; height: 100%; }
+
+.ppe-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.9) translateY(8px);
+  transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+.ppe-layer.worn { opacity: 1; transform: scale(1) translateY(0); }
+.ppe-layer.removing { opacity: 0; transform: scale(0.9) translateY(6px); transition: opacity 0.25s, transform 0.25s; }
+
+.worn-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  justify-content: center;
+  margin-top: 8px;
+  min-height: 24px;
+}
+.worn-chip {
+  background: #d1fae5;
+  border: 1px solid #6ee7b7;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 11px;
+  color: #065f46;
+  font-weight: 700;
+  animation: chipIn 0.3s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+@keyframes chipIn { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* INSTRUCTION */
+.inst-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 13px 15px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  position: relative;
+  overflow: hidden;
+}
+.inst-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), #60a5fa);
+}
+.inst-q { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+.inst-s { font-size: 11px; color: var(--muted); }
+.hint-box {
+  margin-top: 9px;
+  padding: 7px 11px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 9px;
+  font-size: 11px;
+  color: #78350f;
+  display: none;
+}
+.hint-box.visible { display: block; }
+
+/* PPE BUTTONS */
+.ppe-grid {
+  width: 100%;
+  max-width: 360px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+}
+.ppe-grid.cols2 { grid-template-columns: repeat(2, 1fr); }
+
+.ppe-btn {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 15px;
+  padding: 13px 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, transform 0.12s, box-shadow 0.15s;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+}
+.ppe-btn:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 5px 14px rgba(0,96,230,0.1); }
+.ppe-btn:active { transform: scale(0.95); }
+.pb-em { font-size: 28px; display: block; margin-bottom: 4px; pointer-events: none; }
+.pb-nm { font-size: 10px; color: var(--muted); font-weight: 700; pointer-events: none; }
+
+@keyframes shake {
+  0%,100%{transform:translateX(0) rotate(0)}
+  18%{transform:translateX(-7px) rotate(-3deg)}
+  36%{transform:translateX(7px) rotate(3deg)}
+  54%{transform:translateX(-4px)}
+  72%{transform:translateX(4px)}
+}
+.ppe-btn.shake { animation: shake 0.44s ease; border-color: var(--error) !important; }
+
+@keyframes flashGreen {
+  0%{border-color:var(--border);background:var(--surface)}
+  40%{border-color:var(--success);background:#d1fae5}
+  100%{border-color:var(--border);background:var(--surface)}
+}
+.ppe-btn.flash-ok { animation: flashGreen 0.4s ease; }
+
+/* COMPLETION */
+.play-done { flex: 1; display: none; flex-direction: column; align-items: center; padding: 24px 20px 32px; overflow-y: auto; }
+.play-done.visible { display: flex; }
+.done-em { font-size: 60px; text-align: center; margin-bottom: 10px; animation: emBounce 0.65s cubic-bezier(0.175,0.885,0.32,1.275); }
+@keyframes emBounce { 0%{transform:scale(0) rotate(-12deg)} 65%{transform:scale(1.12) rotate(3deg)} 100%{transform:scale(1) rotate(0)} }
+.done-title { font-size: 20px; font-weight: 900; text-align: center; }
+.done-sub { font-size: 12px; color: var(--muted); margin-top: 3px; text-align: center; }
+.stars { font-size: 26px; margin: 8px 0 18px; text-align: center; }
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 360px;
+  margin-bottom: 16px;
+}
+.stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 11px 8px; text-align: center; }
+.stat-val { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700; color: var(--accent); }
+.stat-key { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+.review-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+.review-card h3 { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
+.rv-step { display: flex; align-items: flex-start; gap: 9px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.rv-step:last-child { border-bottom: none; }
+.rv-num { font-family: 'Space Mono', monospace; font-size: 10px; background: var(--accent); color: white; border-radius: 5px; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+.rv-emoji { font-size: 17px; flex-shrink: 0; }
+.rv-name { font-size: 13px; font-weight: 700; }
+.rv-reason { font-size: 11px; color: var(--muted); }
+
+.btn-a {
+  width: 100%;
+  max-width: 360px;
+  padding: 15px;
+  border-radius: 13px;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: all 0.18s;
+  margin-bottom: 8px;
+}
+.btn-a.primary { background: var(--accent); color: white; box-shadow: 0 4px 14px rgba(0,96,230,0.22); }
+.btn-a.primary:hover { background: #0050c4; transform: translateY(-1px); }
+.btn-a.ghost { background: var(--surface); color: var(--text); border: 2px solid var(--border); }
+.btn-a.ghost:hover { border-color: var(--accent); }
+
+/* ═══════════════════════════════════
+   GUIDE TAB
+═══════════════════════════════════ */
+.guide-content { padding: 20px 16px 32px; max-width: 520px; margin: 0 auto; width: 100%; }
+
+.guide-section { margin-bottom: 28px; }
+.guide-section h2 {
+  font-size: 16px;
+  font-weight: 900;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--accent-light);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.guide-section p { font-size: 13px; line-height: 1.75; color: #334155; margin-bottom: 10px; }
+.guide-section ul { padding-left: 0; list-style: none; }
+.guide-section li {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #334155;
+  padding: 6px 0 6px 20px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.guide-section li::before { content: '›'; position: absolute; left: 6px; color: var(--accent); font-weight: 700; }
+
+/* Sequence cards */
+.seq-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.seq-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+.seq-card-title.doffing { color: #7c3aed; }
+.seq-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+}
+.seq-step:last-child { border-bottom: none; }
+.seq-num {
+  width: 22px; height: 22px;
+  background: var(--accent);
+  color: white;
+  border-radius: 7px;
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.seq-num.doffing { background: #7c3aed; }
+.seq-em { font-size: 18px; flex-shrink: 0; }
+.seq-text .seq-name { font-size: 13px; font-weight: 700; }
+.seq-text .seq-why { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+.howto-step {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: flex-start;
+}
+.howto-step:last-child { border-bottom: none; }
+.howto-num {
+  width: 26px; height: 26px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border-radius: 8px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.howto-text { font-size: 13px; line-height: 1.65; color: #334155; padding-top: 4px; }
+.howto-text b { color: var(--text); }
+
+/* ═══════════════════════════════════
+   LINKS TAB
+═══════════════════════════════════ */
+.links-content { padding: 20px 16px 32px; max-width: 520px; margin: 0 auto; width: 100%; }
+
+.links-content h2 {
+  font-size: 16px;
+  font-weight: 900;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--accent-light);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.link-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  transition: border-color 0.18s, box-shadow 0.18s;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+.link-card:hover { border-color: var(--accent); box-shadow: 0 5px 18px rgba(0,96,230,0.1); }
+.link-top { display: flex; align-items: flex-start; gap: 12px; }
+.link-icon { font-size: 28px; flex-shrink: 0; margin-top: 2px; }
+.link-body { flex: 1; min-width: 0; }
+.link-title { font-size: 14px; font-weight: 700; color: var(--accent); text-decoration: none; margin-bottom: 3px; line-height: 1.4; }
+.link-org { font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+.link-desc { font-size: 12px; color: #475569; line-height: 1.6; }
+.link-note {
+  margin-top: 10px;
+  padding: 8px 11px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: 9px;
+  font-size: 11px;
+  color: #78350f;
+  line-height: 1.5;
+}
+.link-url {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--accent);
+  font-family: 'Space Mono', monospace;
+  word-break: break-all;
+}
+
+.links-note {
+  background: #f0f7ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 13px 15px;
+  font-size: 12px;
+  color: #1e40af;
+  line-height: 1.65;
+  margin-top: 6px;
+}
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: calc(var(--tab-h) + var(--safe-bottom) + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(16px);
+  background: #1e293b;
+  color: white;
+  border-radius: 14px;
+  padding: 11px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.26s ease;
+  white-space: nowrap;
+  z-index: 999;
+  max-width: 88vw;
+  text-align: center;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.18);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.ok { background: var(--success); }
+.toast.ng { background: var(--error); }
+
+/* ── FOOTER ── */
+footer {
+  display: none; /* shown inside links tab */
+}
+.footer-inner {
+  padding: 16px;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.7;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="logo">🏥 PPE TRAINER</div>
+  <div class="header-pills">
+    <div class="pill pill-streak" id="streakPill">🔥 <span id="streakNum">0</span></div>
+    <div class="pill pill-score">⭐ <span id="scoreNum">0</span></div>
+  </div>
+</header>
+
+<!-- ── CONTENT ── -->
+<div class="content-area">
+
+  <!-- ═══ PLAY TAB ═══ -->
+  <div class="tab-panel active" id="tabPlay">
+
+    <!-- HOME -->
+    <div class="play-home" id="playHome">
+      <div class="play-home-title">PPE 着脱トレーニング</div>
+      <div class="play-home-sub">正しい順番でマネキンに装着しよう</div>
+      <div class="mode-grid">
+        <div class="mode-card" tabindex="0" onclick="startGame('donning')" onkeydown="if(event.key==='Enter')startGame('donning')">
+          <span class="mc-icon">🧤</span>
+          <div class="mc-title">着用</div>
+          <div class="mc-sub">Donning</div>
         </div>
-        <br />
-        <h2>VRビュー</h2>
-        <p class="section-desc">
-          右側のパネルをタップすると、中央のマネキンに PPE が装着されます。
-          着用フェーズが終わると、自動的に脱衣フェーズに切り替わります。
-        </p>
-        <div class="message-box" id="message-box">
-          まずは
-          <strong>ALCOHOL</strong> パネルをタップして、手指消毒をしてください。
+        <div class="mode-card" tabindex="0" onclick="startGame('doffing')" onkeydown="if(event.key==='Enter')startGame('doffing')">
+          <span class="mc-icon">🚮</span>
+          <div class="mc-title">脱衣</div>
+          <div class="mc-sub">Doffing</div>
+        </div>
+        <div class="mode-card" tabindex="0" onclick="startGame('random')" onkeydown="if(event.key==='Enter')startGame('random')">
+          <span class="mc-icon">🎲</span>
+          <div class="mc-title">ランダム</div>
+          <div class="mc-sub">どちらか出題</div>
+        </div>
+        <div class="mode-card" tabindex="0" onclick="startGame('master')" onkeydown="if(event.key==='Enter')startGame('master')">
+          <span class="mc-icon">🏆</span>
+          <div class="mc-title">マスター</div>
+          <div class="mc-sub">着用→脱衣を連続</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GAME -->
+    <div class="play-game" id="playGame">
+      <div class="mode-banner" id="modeBanner">着用（Donning）</div>
+      <div class="prog-row">
+        <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+        <div class="prog-text" id="progText">0 / 0</div>
+      </div>
+      <div class="game-scroll">
+
+        <!-- Mannequin -->
+        <div class="mannequin-card">
+          <div class="mcard-label" id="mcLabel">まだ何も着ていません</div>
+          <div class="svg-wrap" id="svgWrap">
+
+            <!-- Base body -->
+            <svg viewBox="0 0 180 260" xmlns="http://www.w3.org/2000/svg">
+              <rect x="55" y="95" width="70" height="90" rx="12" fill="#d4b896"/>
+              <rect x="78" y="78" width="24" height="22" rx="6" fill="#c9a87a"/>
+              <ellipse cx="90" cy="58" rx="30" ry="34" fill="#d4b896"/>
+              <ellipse cx="80" cy="52" rx="4" ry="4.5" fill="white"/>
+              <ellipse cx="100" cy="52" rx="4" ry="4.5" fill="white"/>
+              <circle cx="80" cy="53" r="2.5" fill="#3a2a1a"/>
+              <circle cx="100" cy="53" r="2.5" fill="#3a2a1a"/>
+              <path d="M75 46 Q80 43 85 46" stroke="#7a5c3a" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <path d="M95 46 Q100 43 105 46" stroke="#7a5c3a" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <ellipse cx="90" cy="60" rx="3" ry="3.5" fill="#c08060" opacity="0.6"/>
+              <path d="M83 68 Q90 74 97 68" stroke="#a06040" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <ellipse cx="90" cy="30" rx="30" ry="14" fill="#4a3020"/>
+              <rect x="60" y="25" width="60" height="18" rx="8" fill="#4a3020"/>
+              <ellipse cx="60" cy="56" rx="7" ry="9" fill="#c9a87a"/>
+              <ellipse cx="120" cy="56" rx="7" ry="9" fill="#c9a87a"/>
+              <rect x="20" y="95" width="30" height="72" rx="12" fill="#d4b896"/>
+              <rect x="130" y="95" width="30" height="72" rx="12" fill="#d4b896"/>
+              <ellipse cx="35" cy="175" rx="13" ry="11" fill="#c9a87a"/>
+              <ellipse cx="145" cy="175" rx="13" ry="11" fill="#c9a87a"/>
+              <rect x="58" y="182" width="26" height="70" rx="10" fill="#c9a87a"/>
+              <rect x="96" y="182" width="26" height="70" rx="10" fill="#c9a87a"/>
+              <ellipse cx="71" cy="254" rx="15" ry="9" fill="#b8956e"/>
+              <ellipse cx="109" cy="254" rx="15" ry="9" fill="#b8956e"/>
+              <rect x="55" y="175" width="70" height="14" rx="5" fill="#b0c4de" opacity="0.5"/>
+            </svg>
+
+            <!-- Gown layer -->
+            <svg viewBox="0 0 180 260" xmlns="http://www.w3.org/2000/svg" class="ppe-layer" id="layer-gown">
+              <rect x="40" y="88" width="100" height="106" rx="14" fill="#b3d9ff" opacity="0.92"/>
+              <rect x="10" y="90" width="36" height="76" rx="12" fill="#b3d9ff" opacity="0.92"/>
+              <rect x="134" y="90" width="36" height="76" rx="12" fill="#b3d9ff" opacity="0.92"/>
+              <rect x="40" y="172" width="100" height="30" rx="8" fill="#9dcfff" opacity="0.9"/>
+              <path d="M78 88 Q90 82 102 88" stroke="#7ab8f5" stroke-width="3" fill="none" stroke-linecap="round"/>
+              <line x1="90" y1="90" x2="90" y2="185" stroke="#7ab8f5" stroke-width="1.5" opacity="0.5" stroke-dasharray="4,4"/>
+              <rect x="8" y="158" width="40" height="12" rx="6" fill="#7ab8f5" opacity="0.8"/>
+              <rect x="132" y="158" width="40" height="12" rx="6" fill="#7ab8f5" opacity="0.8"/>
+            </svg>
+
+            <!-- Mask layer -->
+            <svg viewBox="0 0 180 260" xmlns="http://www.w3.org/2000/svg" class="ppe-layer" id="layer-mask">
+              <path d="M62 56 Q90 78 118 56 Q118 82 90 86 Q62 82 62 56 Z" fill="white" stroke="#b0b8c4" stroke-width="1.5"/>
+              <path d="M64 62 Q90 72 116 62" stroke="#d0d8e0" stroke-width="1" fill="none"/>
+              <path d="M63 68 Q90 79 117 68" stroke="#d0d8e0" stroke-width="1" fill="none"/>
+              <path d="M64 74 Q90 84 116 74" stroke="#d0d8e0" stroke-width="1" fill="none"/>
+              <path d="M62 58 Q50 60 52 70 Q54 78 62 76" stroke="#b0b8c4" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <path d="M118 58 Q130 60 128 70 Q126 78 118 76" stroke="#b0b8c4" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <path d="M72 58 Q90 56 108 58" stroke="#8090a0" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            </svg>
+
+            <!-- Goggles layer -->
+            <svg viewBox="0 0 180 260" xmlns="http://www.w3.org/2000/svg" class="ppe-layer" id="layer-goggles">
+              <rect x="56" y="44" width="68" height="24" rx="8" fill="#2a3545" opacity="0.9"/>
+              <rect x="58" y="46" width="28" height="20" rx="6" fill="#a8d8f0" opacity="0.6"/>
+              <rect x="94" y="46" width="28" height="20" rx="6" fill="#a8d8f0" opacity="0.6"/>
+              <rect x="84" y="50" width="12" height="12" rx="3" fill="#2a3545" opacity="0.9"/>
+              <path d="M56 54 Q38 56 38 60 Q38 64 56 64" stroke="#2a3545" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.8"/>
+              <path d="M124 54 Q142 56 142 60 Q142 64 124 64" stroke="#2a3545" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.8"/>
+              <path d="M62 49 Q70 48 72 52" stroke="white" stroke-width="1.5" fill="none" opacity="0.5" stroke-linecap="round"/>
+              <path d="M98 49 Q106 48 108 52" stroke="white" stroke-width="1.5" fill="none" opacity="0.5" stroke-linecap="round"/>
+            </svg>
+
+            <!-- Gloves layer -->
+            <svg viewBox="0 0 180 260" xmlns="http://www.w3.org/2000/svg" class="ppe-layer" id="layer-gloves">
+              <rect x="12" y="158" width="36" height="22" rx="8" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.5"/>
+              <ellipse cx="30" cy="158" rx="18" ry="9" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.5"/>
+              <rect x="13" y="148" width="8" height="14" rx="4" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <rect x="23" y="144" width="8" height="16" rx="4" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <rect x="33" y="144" width="8" height="16" rx="4" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <rect x="42" y="148" width="7" height="13" rx="3.5" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <ellipse cx="13" cy="165" rx="5" ry="7" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2" transform="rotate(-20,13,165)"/>
+              <rect x="132" y="158" width="36" height="22" rx="8" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.5"/>
+              <ellipse cx="150" cy="158" rx="18" ry="9" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.5"/>
+              <rect x="159" y="148" width="8" height="14" rx="4" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <rect x="149" y="144" width="8" height="16" rx="4" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <rect x="139" y="144" width="8" height="16" rx="4" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <rect x="131" y="148" width="7" height="13" rx="3.5" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <ellipse cx="167" cy="165" rx="5" ry="7" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2" transform="rotate(20,167,165)"/>
+              <rect x="12" y="178" width="36" height="5" rx="2.5" fill="#80cbc4" opacity="0.7"/>
+              <rect x="132" y="178" width="36" height="5" rx="2.5" fill="#80cbc4" opacity="0.7"/>
+            </svg>
+
+            <!-- Alcohol layer -->
+            <svg viewBox="0 0 180 260" xmlns="http://www.w3.org/2000/svg" class="ppe-layer" id="layer-alcohol">
+              <circle cx="35" cy="175" r="16" fill="#e0f7fa" opacity="0.75"/>
+              <circle cx="145" cy="175" r="16" fill="#e0f7fa" opacity="0.75"/>
+              <line x1="20" y1="160" x2="16" y2="154" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="35" y1="156" x2="35" y2="149" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="50" y1="160" x2="54" y2="154" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="17" y1="175" x2="9" y2="175" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="53" y1="175" x2="61" y2="175" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <text x="26" y="172" font-size="15" fill="#00acc1" opacity="0.9">✦</text>
+              <line x1="130" y1="160" x2="126" y2="154" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="145" y1="156" x2="145" y2="149" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="160" y1="160" x2="164" y2="154" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="127" y1="175" x2="119" y2="175" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="163" y1="175" x2="171" y2="175" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <text x="136" y="172" font-size="15" fill="#00acc1" opacity="0.9">✦</text>
+              <text x="90" y="144" text-anchor="middle" font-size="9" fill="#0097a7" font-family="sans-serif" font-weight="bold" opacity="0.9">手指消毒中…</text>
+              <rect x="82" y="208" width="16" height="26" rx="4" fill="#e0f7fa" stroke="#80deea" stroke-width="1.5"/>
+              <rect x="85" y="205" width="10" height="5" rx="2" fill="#80deea"/>
+              <text x="90" y="224" text-anchor="middle" font-size="7" fill="#0097a7" font-family="sans-serif">OH</text>
+            </svg>
+          </div><!-- /svg-wrap -->
+
+          <div class="worn-strip" id="wornStrip"></div>
+        </div><!-- /mannequin-card -->
+
+        <!-- Instruction -->
+        <div class="inst-card">
+          <div class="inst-q" id="instQ">次に何をする？</div>
+          <div class="inst-s" id="instS">下のボタンをタップしてください</div>
+          <div class="hint-box" id="hintBox"></div>
         </div>
 
-        <div class="btn-row">
-          <button id="btn-reset" class="btn ghost">リセット</button>
+        <!-- PPE buttons -->
+        <div class="ppe-grid" id="ppeGrid"></div>
+
+      </div><!-- /game-scroll -->
+    </div><!-- /play-game -->
+
+    <!-- COMPLETION -->
+    <div class="play-done" id="playDone">
+      <div class="done-em" id="doneEm">🏆</div>
+      <div class="done-title" id="doneTitle">完璧！</div>
+      <div class="done-sub" id="doneSub">ミスなしクリア</div>
+      <div class="stars" id="doneStars">⭐⭐⭐</div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-val" id="sErr">0</div><div class="stat-key">ミス</div></div>
+        <div class="stat-box"><div class="stat-val" id="sTime">0s</div><div class="stat-key">時間</div></div>
+        <div class="stat-box"><div class="stat-val" id="sPt">+0</div><div class="stat-key">獲得pt</div></div>
+      </div>
+      <div class="review-card">
+        <h3 id="rvTitle">正しい手順</h3>
+        <div id="rvSteps"></div>
+      </div>
+      <button class="btn-a primary" id="nextBtn" onclick="nextRound()">次のモードへ →</button>
+      <button class="btn-a ghost" onclick="goHome()">メニューに戻る</button>
+    </div>
+
+  </div><!-- /tabPlay -->
+
+  <!-- ═══ GUIDE TAB ═══ -->
+  <div class="tab-panel" id="tabGuide">
+    <div class="guide-content">
+
+      <div class="guide-section">
+        <h2>🎮 使い方</h2>
+        <div class="howto-step">
+          <div class="howto-num">1</div>
+          <div class="howto-text"><b>モードを選ぶ</b><br>「着用」「脱衣」「ランダム」「マスター」の4種類。初めての方は「着用」から。</div>
         </div>
-      </section>
-
-      <!-- 右：メッセージ＆状態表示 -->
-      <section class="panel panel-ui">
-        <h2 id="status-label">ステータス</h2>
-
-        <div class="status-row">
-          <span class="status-label">Phase</span>
-          <span id="phase-label" class="status-value">Donning</span>
-          <span class="status-label">Step</span>
-          <span id="step-label" class="status-value">1 / 5</span>
+        <div class="howto-step">
+          <div class="howto-num">2</div>
+          <div class="howto-text"><b>ボタンをタップ</b><br>「次に何をする？」の問いに答えて、正しいPPEをタップします。</div>
         </div>
-
-        <div class="log-box">
-          <h3>ログ</h3>
-          <ol id="log-list"></ol>
+        <div class="howto-step">
+          <div class="howto-num">3</div>
+          <div class="howto-text"><b>マネキンで確認</b><br>正解すると、マネキンにPPEが装着（または脱衣）されます。視覚で順番を覚えましょう。</div>
         </div>
-
-        <div class="hint-box">
-          <h3>正しい順番（参考）</h3>
-          <p class="hint-text">
-            着用（Donning）: 🧴 → 🧥 → 😷 → 🥽 → 🧤<br />
-
-            脱衣（Doffing）: 🧤 → 🧴 → 🧥 → 🥽 → 😷 → 🧴
-          </p>
-          <p class="hint-note">
-            実際の手順は施設のマニュアルに従ってください。このVRは学習用イメージです。
-          </p>
+        <div class="howto-step">
+          <div class="howto-num">4</div>
+          <div class="howto-text"><b>ヒント機能</b><br>2回ミスすると正解の理由がヒントとして表示されます。</div>
         </div>
-        <hr />
-        <div>
-          <h2>リンク</h2>
-          <ul class="links-list">
-            <li>
-              <a
-                class="button"
-                href="https://www.who.int/publications/m/item/five-moments-for-hand-hygiene"
-                target="_blank"
-                rel="noopener noreferrer"
-                >WHO「5 moments」</a
-              >
-            </li>
-            <li>
-              <a
-                class="button"
-                href="https://www.youtube.com/watch?v=p2LX1baRKGA"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                看護roo!【公式】YouTube：ガウンテクニック </a
-              ><br />
-              当院のやり方と脱衣の順番が一部異なっています。
-            </li>
-            <li>
-              <a class="button" href="../index.html"> bactVR </a>
-            </li>
-          </ul>
+        <div class="howto-step">
+          <div class="howto-num">5</div>
+          <div class="howto-text"><b>スコアとストリーク</b><br>連続正解でストリーク（🔥）が増えます。ミスが少ないほど高得点です。</div>
         </div>
-      </section>
-    </main>
+      </div>
 
-    <footer class="site-footer">
-      <p>
-        試作版：感染対策 VR & シミュレーション教材（HTML / CSS / JS のみで動作）
-      </p>
-      <p>ChatGPTによるコード支援を受けて作成。</p>
-      <p>© 2025 bactPlatform</p>
-    </footer>
+      <div class="guide-section">
+        <h2>🧤 着用の順番（Donning）</h2>
+        <div class="seq-card">
+          <div class="seq-card-title">着用 — 5ステップ</div>
+          <div class="seq-step">
+            <div class="seq-num">1</div>
+            <div class="seq-em">🧴</div>
+            <div class="seq-text"><div class="seq-name">アルコール手指消毒</div><div class="seq-why">PPEを装着する前に手を清潔にする</div></div>
+          </div>
+          <div class="seq-step">
+            <div class="seq-num">2</div>
+            <div class="seq-em">🧥</div>
+            <div class="seq-text"><div class="seq-name">ガウン</div><div class="seq-why">身体を覆うものを最初に装着する</div></div>
+          </div>
+          <div class="seq-step">
+            <div class="seq-num">3</div>
+            <div class="seq-em">😷</div>
+            <div class="seq-text"><div class="seq-name">マスク</div><div class="seq-why">ゴーグルより先に装着し、ゴーグルで押さえる</div></div>
+          </div>
+          <div class="seq-step">
+            <div class="seq-num">4</div>
+            <div class="seq-em">🥽</div>
+            <div class="seq-text"><div class="seq-name">ゴーグル</div><div class="seq-why">マスクの上からかけて固定する</div></div>
+          </div>
+          <div class="seq-step">
+            <div class="seq-num">5</div>
+            <div class="seq-em">🧤</div>
+            <div class="seq-text"><div class="seq-name">グローブ</div><div class="seq-why">最後に装着し、ガウンの袖口を覆う</div></div>
+          </div>
+        </div>
+      </div>
 
-    <script src="script.js"></script>
-  </body>
+      <div class="guide-section">
+        <h2>🚮 脱衣の順番（Doffing）</h2>
+        <p>脱衣は汚染を広げないことが目的です。最も汚染された部位から外し、都度手指消毒を行います。</p>
+        <div class="seq-card">
+          <div class="seq-card-title doffing">脱衣 — 6ステップ</div>
+          <div class="seq-step">
+            <div class="seq-num doffing">1</div>
+            <div class="seq-em">🧤</div>
+            <div class="seq-text"><div class="seq-name">グローブ</div><div class="seq-why">最も汚染されているグローブを最初に外す</div></div>
+          </div>
+          <div class="seq-step">
+            <div class="seq-num doffing">2</div>
+            <div class="seq-em">🧴</div>
+            <div class="seq-text"><div class="seq-name">アルコール手指消毒</div><div class="seq-why">グローブを外した直後に必ず手指消毒</div></div>
+          </div>
+          <div class="seq-step">
+            <div class="seq-num doffing">3</div>
+            <div class="seq-em">🧥</div>
+            <div class="seq-text"><div class="seq-name">ガウン</div><div class="seq-why">内側に丸めながら脱ぎ、外側に触れない</div></div>
+          </div>
+          <div class="seq-step">
+            <div class="seq-num doffing">4</div>
+            <div class="seq-em">🥽</div>
+            <div class="seq-text"><div class="seq-name">ゴーグル</div><div class="seq-why">後ろのストラップをつかんで外す。前面に触れない</div></div>
+          </div>
+          <div class="seq-step">
+            <div class="seq-num doffing">5</div>
+            <div class="seq-em">😷</div>
+            <div class="seq-text"><div class="seq-name">マスク</div><div class="seq-why">最後に外す。マスク外側に触れない</div></div>
+          </div>
+          <div class="seq-step">
+            <div class="seq-num doffing">6</div>
+            <div class="seq-em">🧴</div>
+            <div class="seq-text"><div class="seq-name">アルコール手指消毒</div><div class="seq-why">すべて外した後も必ず手指消毒で締める</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="guide-section">
+        <h2>⚠️ 重要なポイント</h2>
+        <ul>
+          <li>PPEの外側（汚染面）には素手で触れない</li>
+          <li>ガウンは内側（清潔面）を外側にして丸めながら脱ぐ</li>
+          <li>ゴーグルは前面でなく後ろのストラップ部分をつかむ</li>
+          <li>マスクは最後。ひも（またはゴム）部分のみを持って外す</li>
+          <li>手指消毒はグローブ脱衣直後と、全脱衣後の2回実施</li>
+          <li>当院の手順が参考リンクの動画と一部異なる場合がある（リンクタブ参照）</li>
+        </ul>
+      </div>
+
+    </div>
+  </div><!-- /tabGuide -->
+
+  <!-- ═══ LINKS TAB ═══ -->
+  <div class="tab-panel" id="tabLinks">
+    <div class="links-content">
+
+      <h2>🔗 参考リンク</h2>
+
+      <a class="link-card" href="https://www.who.int/publications/m/item/five-moments-for-hand-hygiene" target="_blank" rel="noopener">
+        <div class="link-top">
+          <div class="link-icon">🌍</div>
+          <div class="link-body">
+            <div class="link-title">WHO「5 Moments for Hand Hygiene」</div>
+            <div class="link-org">World Health Organization（WHO）</div>
+            <div class="link-desc">WHOが提唱する「手指衛生の5つのタイミング」の公式ページ。PPE着脱と手指衛生の考え方の基盤となる国際ガイドラインです。</div>
+          </div>
+        </div>
+        <div class="link-url">↗ who.int</div>
+      </a>
+
+      <a class="link-card" href="https://www.youtube.com/watch?v=p2LX1baRKGA" target="_blank" rel="noopener">
+        <div class="link-top">
+          <div class="link-icon">▶️</div>
+          <div class="link-body">
+            <div class="link-title">ガウンテクニック（動画解説）</div>
+            <div class="link-org">看護roo!【公式】YouTube</div>
+            <div class="link-desc">ガウン・PPEの着脱手順を映像で確認できる動画です。視覚的にわかりやすく、実際の動きを確認するのに役立ちます。</div>
+          </div>
+        </div>
+        <div class="link-note">⚠️ 当院のやり方と脱衣の順番が一部異なります。本アプリの手順を優先してください。</div>
+        <div class="link-url">↗ youtube.com</div>
+      </a>
+
+      <a class="link-card" href="https://somekata.github.io/bactVR/index.html" target="_blank" rel="noopener">
+        <div class="link-top">
+          <div class="link-icon">🦠</div>
+          <div class="link-body">
+            <div class="link-title">bactVR</div>
+            <div class="link-org">somekata.github.io</div>
+            <div class="link-desc">細菌・感染症に関連するVR／ビジュアルコンテンツ。感染対策の理解を深める補助教材として活用できます。</div>
+          </div>
+        </div>
+        <div class="link-url">↗ somekata.github.io</div>
+      </a>
+
+      <div class="links-note">
+        📌 外部リンクは新しいタブで開きます。リンク先のコンテンツについては各サイトの利用規約に従ってください。
+      </div>
+
+      <div class="footer-inner">
+        本テキストは AI（Claude, Anthropic）を用いて作成されました。内容には誤りが含まれる可能性があります。<br>
+        医療上の判断には必ず公式の教科書・文献・専門家の指導を参照してください。<br>
+        二次利用・再配布は自己責任のもとで可能です。その際、本注記の保持を推奨します。
+      </div>
+
+    </div>
+  </div><!-- /tabLinks -->
+
+</div><!-- /content-area -->
+
+<!-- ── BOTTOM TABS ── -->
+<nav class="bottom-tabs">
+  <button class="tab-btn active" id="tbPlay" onclick="switchTab('Play')">
+    <span class="tab-icon">🎮</span>
+    <span class="tab-label">プレイ</span>
+  </button>
+  <button class="tab-btn" id="tbGuide" onclick="switchTab('Guide')">
+    <span class="tab-icon">📖</span>
+    <span class="tab-label">解説</span>
+  </button>
+  <button class="tab-btn" id="tbLinks" onclick="switchTab('Links')">
+    <span class="tab-icon">🔗</span>
+    <span class="tab-label">リンク</span>
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════
+// TAB SWITCHING
+// ════════════════════════════════════
+function switchTab(name) {
+  ['Play','Guide','Links'].forEach(n => {
+    document.getElementById('tab'+n).classList.toggle('active', n===name);
+    document.getElementById('tb'+n).classList.toggle('active', n===name);
+  });
+}
+
+// ════════════════════════════════════
+// DATA
+// ════════════════════════════════════
+const PPE_DEF = {
+  alcohol: { emoji:'🧴', name:'アルコール', layer:'layer-alcohol' },
+  gown:    { emoji:'🧥', name:'ガウン',     layer:'layer-gown'    },
+  mask:    { emoji:'😷', name:'マスク',     layer:'layer-mask'    },
+  goggles: { emoji:'🥽', name:'ゴーグル',   layer:'layer-goggles' },
+  gloves:  { emoji:'🧤', name:'グローブ',   layer:'layer-gloves'  },
+};
+const DONNING = [
+  { key:'alcohol', reason:'まず手指消毒でベースを清潔に' },
+  { key:'gown',    reason:'身体全体を覆うガウンを先に装着' },
+  { key:'mask',    reason:'ゴーグルより前にマスクを装着' },
+  { key:'goggles', reason:'マスクの上からゴーグルを固定' },
+  { key:'gloves',  reason:'最後にグローブで手を保護' },
+];
+const DOFFING = [
+  { key:'gloves',  reason:'最も汚染されたグローブから' },
+  { key:'alcohol', reason:'グローブ外し後すぐ手指消毒' },
+  { key:'gown',    reason:'内側に丸めながら前で外す' },
+  { key:'goggles', reason:'後ろのストラップをつかんで外す' },
+  { key:'mask',    reason:'最後はマスク。外側に触れない' },
+  { key:'alcohol', reason:'全脱衣後も必ず手指消毒' },
+];
+
+// ════════════════════════════════════
+// STATE
+// ════════════════════════════════════
+const G = {
+  mode: null, seq: [], step: 0,
+  mistakes: 0,
+  streak: +localStorage.getItem('ppeStreak')||0,
+  score:   +localStorage.getItem('ppeScore')||0,
+  t0: 0, hintShown: false,
+  wornKeys: new Set(),
+  masterPhase: 0,
+};
+
+// ════════════════════════════════════
+// HOME / NAVIGATION
+// ════════════════════════════════════
+function goHome() {
+  document.getElementById('playHome').style.display = '';
+  document.getElementById('playGame').classList.remove('visible');
+  document.getElementById('playDone').classList.remove('visible');
+  clearAllLayers();
+}
+
+function showGameView() {
+  document.getElementById('playHome').style.display = 'none';
+  document.getElementById('playGame').classList.add('visible');
+  document.getElementById('playDone').classList.remove('visible');
+}
+
+function showDoneView() {
+  document.getElementById('playHome').style.display = 'none';
+  document.getElementById('playGame').classList.remove('visible');
+  document.getElementById('playDone').classList.add('visible');
+}
+
+// ════════════════════════════════════
+// START GAME
+// ════════════════════════════════════
+function startGame(mode) {
+  G.mode = mode; G.step = 0; G.mistakes = 0;
+  G.hintShown = false; G.masterPhase = 0;
+  G.wornKeys.clear(); clearAllLayers();
+
+  if (mode === 'random') {
+    G.seq = Math.random()<0.5 ? [...DONNING] : [...DOFFING];
+    G.mode = G.seq === DONNING ? 'donning' : 'doffing';
+  } else if (mode === 'master') {
+    G.seq = [...DONNING];
+  } else if (mode === 'donning') {
+    G.seq = [...DONNING];
+  } else {
+    G.seq = [...DOFFING];
+    fullyDress();
+  }
+
+  G.t0 = Date.now();
+  showGameView();
+  renderGame();
+}
+
+function fullyDress() {
+  ['gown','mask','goggles','gloves'].forEach(k => {
+    document.getElementById(PPE_DEF[k].layer).classList.add('worn');
+    G.wornKeys.add(k);
+  });
+  updateStrip();
+}
+
+function clearAllLayers() {
+  Object.values(PPE_DEF).forEach(p => {
+    const el = document.getElementById(p.layer);
+    el.classList.remove('worn','removing');
+  });
+  document.getElementById('wornStrip').innerHTML = '';
+}
+
+// ════════════════════════════════════
+// RENDER
+// ════════════════════════════════════
+function renderGame() {
+  const { step, seq, mode, masterPhase } = G;
+  const total = seq.length;
+  const isDoff = mode==='doffing' || (mode==='master' && masterPhase===1);
+
+  // Banner
+  const banner = document.getElementById('modeBanner');
+  banner.textContent = isDoff ? '脱衣（Doffing）' : '着用（Donning）';
+  banner.className = 'mode-banner' + (isDoff ? ' doffing' : '');
+
+  // Progress
+  document.getElementById('progFill').style.width = `${(step/total)*100}%`;
+  document.getElementById('progText').textContent = `${step} / ${total}`;
+
+  // Mannequin label
+  document.getElementById('mcLabel').textContent =
+    isDoff ? (step===0?'完全装備中':`${step}つ外しました`) :
+             (step===0?'まだ何も着ていません':`${step}つ装着済み`);
+
+  // Instruction
+  document.getElementById('instQ').textContent = `${step+1}番目：次に何をする？`;
+  document.getElementById('instS').textContent = 'タップして選んでください';
+  document.getElementById('hintBox').classList.remove('visible');
+
+  // Buttons — unique keys, shuffled
+  const keys = [...new Set(seq.map(s=>s.key))];
+  const shuffled = [...keys].sort(()=>Math.random()-0.5);
+  const grid = document.getElementById('ppeGrid');
+  grid.className = 'ppe-grid' + (shuffled.length<=4?' cols2':'');
+  grid.innerHTML = shuffled.map(k => {
+    const p = PPE_DEF[k];
+    return `<button class="ppe-btn" id="pbtn-${k}" onclick="handleTap('${k}')">
+      <span class="pb-em">${p.emoji}</span>
+      <span class="pb-nm">${p.name}</span>
+    </button>`;
+  }).join('');
+
+  updateHeader();
+}
+
+// ════════════════════════════════════
+// INTERACTION
+// ════════════════════════════════════
+function handleTap(key) {
+  const correct = G.seq[G.step].key;
+  if (key === correct) onCorrect(key);
+  else onWrong(key, correct);
+}
+
+function onCorrect(key) {
+  const btn = document.getElementById(`pbtn-${key}`);
+  if (btn) btn.classList.add('flash-ok');
+
+  G.streak++;
+  localStorage.setItem('ppeStreak', G.streak);
+
+  const isDoff = G.mode==='doffing' || (G.mode==='master' && G.masterPhase===1);
+  isDoff ? removePPE(key) : addPPE(key);
+
+  showToast('✅ 正解！', 'ok', 750);
+  G.step++;
+
+  setTimeout(() => {
+    if (G.step >= G.seq.length) {
+      if (G.mode==='master' && G.masterPhase===0) {
+        G.masterPhase = 1;
+        G.seq = [...DOFFING];
+        G.step = 0;
+        G.hintShown = false;
+        fullyDress();
+        showToast('🎯 着用完了！次は脱衣です', 'ok', 1600);
+        setTimeout(renderGame, 1700);
+      } else {
+        showCompletion();
+      }
+    } else {
+      renderGame();
+    }
+  }, 480);
+}
+
+function onWrong(key, correct) {
+  G.mistakes++;
+  G.streak = 0;
+  localStorage.setItem('ppeStreak', 0);
+
+  const btn = document.getElementById(`pbtn-${key}`);
+  if (btn) { btn.classList.add('shake'); setTimeout(()=>btn.classList.remove('shake'),480); }
+
+  const cp = PPE_DEF[correct];
+  showToast(`❌ → ${cp.emoji} ${cp.name}`, 'ng', 1800);
+
+  if (G.mistakes >= 2 && !G.hintShown) {
+    G.hintShown = true;
+    setTimeout(() => {
+      const h = document.getElementById('hintBox');
+      h.textContent = `💡 ${cp.emoji} ${cp.name}：${G.seq[G.step].reason}`;
+      h.classList.add('visible');
+    }, 1900);
+  }
+  updateHeader();
+}
+
+// ════════════════════════════════════
+// MANNEQUIN LAYERS
+// ════════════════════════════════════
+function addPPE(key) {
+  const el = document.getElementById(PPE_DEF[key].layer);
+  if (!el) return;
+  el.classList.remove('removing');
+  el.classList.add('worn');
+  G.wornKeys.add(key);
+  updateStrip();
+  // Alcohol disappears after 0.8s (it's a transient effect)
+  if (key === 'alcohol') setTimeout(() => el.classList.remove('worn'), 800);
+}
+
+function removePPE(key) {
+  const el = document.getElementById(PPE_DEF[key].layer);
+  if (!el) return;
+  el.classList.add('removing');
+  setTimeout(()=>el.classList.remove('worn','removing'), 280);
+  G.wornKeys.delete(key);
+  updateStrip();
+}
+
+function updateStrip() {
+  const strip = document.getElementById('wornStrip');
+  const chips = [...G.wornKeys].filter(k=>k!=='alcohol').map(k => {
+    const p = PPE_DEF[k];
+    return `<div class="worn-chip">${p.emoji} ${p.name}</div>`;
+  });
+  strip.innerHTML = chips.length
+    ? chips.join('')
+    : '<span style="font-size:11px;color:var(--muted)">—</span>';
+}
+
+// ════════════════════════════════════
+// COMPLETION
+// ════════════════════════════════════
+function showCompletion() {
+  const elapsed = Math.round((Date.now()-G.t0)/1000);
+  const err = G.mistakes;
+  const pts = Math.max(10, 100 - err*10);
+  G.score += pts;
+  localStorage.setItem('ppeScore', G.score);
+
+  document.getElementById('doneEm').textContent = err===0?'🏆':err<=2?'😊':'💪';
+  document.getElementById('doneTitle').textContent = err===0?'完璧です！':err<=2?'よくできました！':'お疲れ様！';
+  document.getElementById('doneSub').textContent = err===0?'ミスなしクリア':`ミス ${err}回`;
+  document.getElementById('doneStars').textContent = err===0?'⭐⭐⭐':err<=2?'⭐⭐':'⭐';
+  document.getElementById('sErr').textContent = err;
+  document.getElementById('sTime').textContent = elapsed+'s';
+  document.getElementById('sPt').textContent = '+'+pts;
+
+  const seq = G.mode==='master' ? [...DONNING,...DOFFING] : G.seq;
+  document.getElementById('rvTitle').textContent =
+    G.mode==='master'?'正しい手順（着用・脱衣）':G.mode==='doffing'?'正しい脱衣の手順':'正しい着用の手順';
+  document.getElementById('rvSteps').innerHTML = seq.map((s,i) => {
+    const p = PPE_DEF[s.key];
+    return `<div class="rv-step">
+      <div class="rv-num">${i+1}</div>
+      <div class="rv-emoji">${p.emoji}</div>
+      <div class="rv-text"><div class="rv-name">${p.name}</div><div class="rv-reason">${s.reason}</div></div>
+    </div>`;
+  }).join('');
+
+  const nb = document.getElementById('nextBtn');
+  if (G.mode==='donning') { nb.textContent='脱衣に挑戦 →'; nb.dataset.next='doffing'; }
+  else if (G.mode==='doffing') { nb.textContent='着用に挑戦 →'; nb.dataset.next='donning'; }
+  else { nb.textContent='もう一度マスター →'; nb.dataset.next='master'; }
+
+  showDoneView();
+}
+
+function nextRound() {
+  startGame(document.getElementById('nextBtn').dataset.next || 'donning');
+}
+
+// ════════════════════════════════════
+// HEADER UPDATE
+// ════════════════════════════════════
+function updateHeader() {
+  document.getElementById('scoreNum').textContent = G.score;
+  document.getElementById('streakNum').textContent = G.streak;
+  document.getElementById('streakPill').classList.toggle('visible', G.streak >= 2);
+}
+
+// ════════════════════════════════════
+// TOAST
+// ════════════════════════════════════
+let toastT = null;
+function showToast(msg, type, dur=1400) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  clearTimeout(toastT);
+  toastT = setTimeout(()=>{ t.className='toast'; }, dur);
+}
+
+// INIT
+updateHeader();
+</script>
+</body>
 </html>
