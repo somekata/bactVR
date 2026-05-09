@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>PPE着脱トレーニング2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap');
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html{-webkit-text-size-adjust:100%;}
+
+:root{
+  --bg:#f2f5f9;
+  --surface:#ffffff;
+  --border:#e2e8f0;
+  --accent:#0060e6;
+  --accent-lt:#e8f0ff;
+  --success:#059669;
+  --error:#dc2626;
+  --text:#1e293b;
+  --muted:#94a3b8;
+  --tab-h:56px;
+  --hdr-h:52px;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+
+body{
+  font-family:'Noto Sans JP',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  height:100dvh;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+/* ── HEADER ── */
+header{
+  height:var(--hdr-h);
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;flex-shrink:0;
+  box-shadow:0 1px 4px rgba(0,0,0,.06);
+  position:relative;z-index:20;
+}
+.logo{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;color:var(--accent);}
+.hdr-pills{display:flex;gap:8px;align-items:center;}
+.pill{border-radius:999px;padding:4px 11px;font-family:'Space Mono',monospace;font-size:11px;font-weight:700;}
+.pill-streak{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;display:none;}
+.pill-streak.visible{display:block;}
+.pill-score{background:#fef9c3;border:1px solid #fde047;color:#854d0e;}
+
+/* ── CONTENT / TABS ── */
+.content-area{flex:1;overflow:hidden;position:relative;min-height:0;}
+.tab-panel{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;display:none;flex-direction:column;}
+.tab-panel.active{display:flex;}
+
+/* ── BOTTOM TABS ── */
+.bottom-tabs{
+  height:calc(var(--tab-h) + var(--safe-b));
+  padding-bottom:var(--safe-b);
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  display:flex;flex-shrink:0;
+  box-shadow:0 -2px 8px rgba(0,0,0,.05);
+  z-index:20;
+}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--muted);transition:color .18s;padding:6px 4px 0;}
+.tab-btn.active{color:var(--accent);}
+.tab-btn .ti{font-size:22px;line-height:1;}
+.tab-btn .tl{font-size:10px;font-weight:700;letter-spacing:.3px;}
+
+/* ══════════════════════════════
+   PLAY TAB
+══════════════════════════════ */
+
+/* ── HOME ── */
+.play-home{
+  flex:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:24px 20px;gap:0;
+}
+.home-title{font-size:20px;font-weight:900;text-align:center;letter-spacing:-.3px;margin-bottom:4px;}
+.home-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:20px;}
+
+/* Avatar select */
+.avatar-select{
+  width:100%;max-width:380px;
+  background:var(--surface);
+  border:2px solid var(--border);
+  border-radius:18px;
+  padding:16px;
+  margin-bottom:16px;
+}
+.avatar-select-title{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;text-align:center;}
+.avatar-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.avatar-btn{
+  background:var(--bg);border:2px solid var(--border);border-radius:14px;
+  padding:14px 10px;cursor:pointer;text-align:center;
+  transition:all .18s;
+}
+.avatar-btn:hover{border-color:var(--accent);background:var(--accent-lt);}
+.avatar-btn.selected{border-color:var(--accent);background:var(--accent-lt);}
+.avatar-btn .ab-icon{font-size:26px;display:block;margin-bottom:5px;}
+.avatar-btn .ab-label{font-size:12px;font-weight:700;}
+.avatar-btn .ab-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:380px;}
+.mode-card{
+  background:var(--surface);border:2px solid var(--border);border-radius:18px;
+  padding:20px 12px;cursor:pointer;text-align:center;
+  transition:all .18s;box-shadow:0 2px 6px rgba(0,0,0,.04);
+}
+.mode-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,96,230,.12);}
+.mode-card:active{transform:scale(.97);}
+.mc-icon{font-size:32px;display:block;margin-bottom:8px;}
+.mc-title{font-size:14px;font-weight:700;}
+.mc-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ── CAMERA SCREEN ── */
+.camera-screen{
+  position:absolute;inset:0;
+  background:#000;
+  display:none;flex-direction:column;
+  align-items:center;justify-content:center;
+  z-index:30;
+  padding:16px;
+}
+.camera-screen.visible{display:flex;}
+
+.cam-title{color:#fff;font-size:14px;font-weight:700;margin-bottom:12px;text-align:center;}
+.cam-hint{color:rgba(255,255,255,.65);font-size:11px;margin-bottom:14px;text-align:center;line-height:1.6;}
+
+/* Camera viewport with mannequin guide overlay */
+.cam-viewport{
+  position:relative;
+  width:min(320px,85vw);
+  aspect-ratio:9/16;
+  border-radius:16px;
+  overflow:hidden;
+  border:2px solid rgba(255,255,255,.3);
+  background:#111;
+  margin-bottom:14px;
+  flex-shrink:0;
+}
+#camVideo{
+  width:100%;height:100%;
+  object-fit:cover;
+  transform:scaleX(-1); /* mirror selfie */
+}
+/* Mannequin silhouette guide overlay */
+.cam-guide{
+  position:absolute;inset:0;
+  pointer-events:none;
+}
+.cam-guide svg{width:100%;height:100%;}
+
+.cam-controls{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;}
+.cam-btn{
+  padding:12px 18px;border-radius:12px;border:none;
+  font-family:'Noto Sans JP',sans-serif;font-size:13px;font-weight:700;
+  cursor:pointer;transition:all .18s;
+}
+.cam-btn.primary{background:var(--accent);color:#fff;}
+.cam-btn.primary:hover{background:#0050c4;}
+.cam-btn.ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);}
+.cam-btn.ghost:hover{background:rgba(255,255,255,.22);}
+.cam-shoot{
+  width:64px;height:64px;border-radius:50%;
+  background:#fff;border:4px solid rgba(255,255,255,.5);
+  cursor:pointer;transition:transform .15s;
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;flex-shrink:0;
+}
+.cam-shoot:hover{transform:scale(1.06);}
+.cam-shoot:active{transform:scale(.93);}
+/* hidden file input */
+#fileInput{display:none;}
+
+/* ── GAME VIEW ── */
+.play-game{flex:1;display:none;flex-direction:column;}
+.play-game.visible{display:flex;}
+
+.mode-banner{
+  background:var(--accent);color:#fff;
+  text-align:center;padding:8px 16px;
+  font-size:13px;font-weight:700;letter-spacing:.8px;flex-shrink:0;
+}
+.mode-banner.doffing{background:#7c3aed;}
+
+.prog-row{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 16px;background:var(--surface);
+  border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.prog-track{flex:1;height:5px;background:var(--border);border-radius:999px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),#60a5fa);border-radius:999px;transition:width .45s cubic-bezier(.4,0,.2,1);}
+.prog-text{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);white-space:nowrap;}
+
+.game-scroll{
+  flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:12px 16px 20px;
+  display:flex;flex-direction:column;align-items:center;gap:12px;
+}
+
+/* ── MANNEQUIN CARD ── */
+.mannequin-card{
+  width:100%;max-width:360px;
+  background:var(--surface);
+  border:1.5px solid var(--border);border-radius:20px;
+  padding:14px 12px 10px;
+  display:flex;flex-direction:column;align-items:center;
+  box-shadow:0 3px 12px rgba(0,0,0,.05);
+}
+.mcard-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;}
+
+/* SVG wrap — same as v3 */
+.svg-wrap{width:160px;height:232px;position:relative;flex-shrink:0;}
+.svg-wrap svg{width:100%;height:100%;}
+
+.ppe-layer{
+  position:absolute;inset:0;pointer-events:none;
+  opacity:0;transform:scale(.9) translateY(8px);
+  transition:opacity .35s ease,transform .35s cubic-bezier(.175,.885,.32,1.275);
+}
+.ppe-layer.worn{opacity:1;transform:scale(1) translateY(0);}
+.ppe-layer.removing{opacity:0;transform:scale(.9) translateY(6px);transition:opacity .25s,transform .25s;}
+
+.worn-strip{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:8px;min-height:24px;}
+.worn-chip{
+  background:#d1fae5;border:1px solid #6ee7b7;border-radius:999px;
+  padding:2px 9px;font-size:11px;color:#065f46;font-weight:700;
+  animation:chipIn .3s cubic-bezier(.175,.885,.32,1.275);
+}
+@keyframes chipIn{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* ── PHOTO-MANNEQUIN ── */
+/* When photo mode: the svg-wrap still exists but shows clipPath image instead of SVG figure */
+.photo-mannequin{
+  position:absolute;inset:0;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .4s;
+}
+.photo-mannequin.ready{opacity:1;}
+
+/* ── INSTRUCTION ── */
+.inst-card{
+  width:100%;max-width:360px;background:var(--surface);
+  border:1.5px solid var(--border);border-radius:16px;
+  padding:13px 15px;box-shadow:0 2px 6px rgba(0,0,0,.04);
+  position:relative;overflow:hidden;
+}
+.inst-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#60a5fa);}
+.inst-q{font-size:14px;font-weight:700;margin-bottom:2px;}
+.inst-s{font-size:11px;color:var(--muted);}
+.hint-box{margin-top:9px;padding:7px 11px;background:#fffbeb;border:1px solid #fcd34d;border-radius:9px;font-size:11px;color:#78350f;display:none;}
+.hint-box.visible{display:block;}
+
+/* ── PPE BUTTONS ── */
+.ppe-grid{width:100%;max-width:360px;display:grid;gap:8px;grid-template-columns:repeat(3,1fr);}
+.ppe-grid.cols2{grid-template-columns:repeat(2,1fr);}
+.ppe-btn{
+  background:var(--surface);border:2px solid var(--border);border-radius:15px;
+  padding:13px 8px;cursor:pointer;text-align:center;
+  transition:border-color .15s,transform .12s,box-shadow .15s;
+  box-shadow:0 2px 5px rgba(0,0,0,.04);
+}
+.ppe-btn:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 5px 14px rgba(0,96,230,.1);}
+.ppe-btn:active{transform:scale(.95);}
+.pb-em{font-size:28px;display:block;margin-bottom:4px;pointer-events:none;}
+.pb-nm{font-size:10px;color:var(--muted);font-weight:700;pointer-events:none;}
+
+@keyframes shake{
+  0%,100%{transform:translateX(0) rotate(0)}
+  18%{transform:translateX(-7px) rotate(-3deg)}
+  36%{transform:translateX(7px) rotate(3deg)}
+  54%{transform:translateX(-4px)}
+  72%{transform:translateX(4px)}
+}
+.ppe-btn.shake{animation:shake .44s ease;border-color:var(--error)!important;}
+@keyframes flashGreen{
+  0%{border-color:var(--border);background:var(--surface)}
+  40%{border-color:var(--success);background:#d1fae5}
+  100%{border-color:var(--border);background:var(--surface)}
+}
+.ppe-btn.flash-ok{animation:flashGreen .4s ease;}
+
+/* ── COMPLETION ── */
+.play-done{flex:1;display:none;flex-direction:column;align-items:center;padding:24px 20px 32px;overflow-y:auto;}
+.play-done.visible{display:flex;}
+.done-em{font-size:60px;text-align:center;margin-bottom:10px;animation:emBounce .65s cubic-bezier(.175,.885,.32,1.275);}
+@keyframes emBounce{0%{transform:scale(0) rotate(-12deg)}65%{transform:scale(1.12) rotate(3deg)}100%{transform:scale(1) rotate(0)}}
+.done-title{font-size:20px;font-weight:900;text-align:center;}
+.done-sub{font-size:12px;color:var(--muted);margin-top:3px;text-align:center;}
+.stars{font-size:26px;margin:8px 0 18px;text-align:center;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;max-width:360px;margin-bottom:16px;}
+.stat-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:11px 8px;text-align:center;}
+.stat-val{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;color:var(--accent);}
+.stat-key{font-size:10px;color:var(--muted);margin-top:2px;}
+.review-card{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:16px;}
+.review-card h3{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;}
+.rv-step{display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:1px solid var(--border);}
+.rv-step:last-child{border-bottom:none;}
+.rv-num{font-family:'Space Mono',monospace;font-size:10px;background:var(--accent);color:#fff;border-radius:5px;width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.rv-emoji{font-size:17px;flex-shrink:0;}
+.rv-name{font-size:13px;font-weight:700;}
+.rv-reason{font-size:11px;color:var(--muted);}
+.btn-a{width:100%;max-width:360px;padding:15px;border-radius:13px;font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:700;cursor:pointer;border:none;transition:all .18s;margin-bottom:8px;}
+.btn-a.primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(0,96,230,.22);}
+.btn-a.primary:hover{background:#0050c4;transform:translateY(-1px);}
+.btn-a.ghost{background:var(--surface);color:var(--text);border:2px solid var(--border);}
+.btn-a.ghost:hover{border-color:var(--accent);}
+
+/* ══════════════════════════════
+   GUIDE TAB
+══════════════════════════════ */
+.tab-scroll{padding:20px 16px 32px;max-width:520px;margin:0 auto;width:100%;}
+.gs{margin-bottom:26px;}
+.gs h2{font-size:15px;font-weight:900;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--accent-lt);display:flex;align-items:center;gap:7px;}
+.gs p{font-size:13px;line-height:1.75;color:#334155;margin-bottom:8px;}
+.seq-card{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,.04);}
+.seq-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:10px;}
+.seq-head.doff{color:#7c3aed;}
+.seq-step{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.seq-step:last-child{border-bottom:none;}
+.seq-n{font-family:'Space Mono',monospace;font-size:10px;background:var(--accent);color:#fff;border-radius:6px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.seq-n.doff{background:#7c3aed;}
+.seq-ic{font-size:18px;flex-shrink:0;}
+.seq-nm{font-size:13px;font-weight:700;}
+.seq-wh{font-size:11px;color:var(--muted);}
+.key-list{list-style:none;padding:0;}
+.key-list li{font-size:13px;color:#334155;padding:7px 0 7px 20px;border-bottom:1px solid var(--border);position:relative;line-height:1.6;}
+.key-list li::before{content:'›';position:absolute;left:6px;color:var(--accent);font-weight:700;}
+
+/* ══════════════════════════════
+   LINKS TAB
+══════════════════════════════ */
+.lk-card{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:15px;margin-bottom:11px;box-shadow:0 2px 6px rgba(0,0,0,.04);display:block;text-decoration:none;color:inherit;transition:border-color .18s,box-shadow .18s;}
+.lk-card:hover{border-color:var(--accent);box-shadow:0 5px 18px rgba(0,102,255,.1);}
+.lk-top{display:flex;align-items:flex-start;gap:12px;}
+.lk-icon{font-size:28px;flex-shrink:0;margin-top:2px;}
+.lk-title{font-size:14px;font-weight:700;color:var(--accent);margin-bottom:3px;line-height:1.4;}
+.lk-org{font-size:11px;color:var(--muted);margin-bottom:4px;}
+.lk-desc{font-size:12px;color:#475569;line-height:1.6;}
+.lk-note{margin-top:9px;padding:7px 11px;background:#fffbeb;border:1px solid #fcd34d;border-radius:9px;font-size:11px;color:#78350f;line-height:1.5;}
+.lk-url{display:inline-flex;align-items:center;gap:4px;margin-top:9px;font-size:11px;color:var(--accent);font-family:'Space Mono',monospace;}
+.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:13px 15px;font-size:12px;color:#1e40af;line-height:1.65;margin-top:6px;}
+.footer-note{padding:16px;font-size:10px;color:var(--muted);line-height:1.7;text-align:center;border-top:1px solid var(--border);margin-top:8px;}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;
+  bottom:calc(var(--tab-h) + var(--safe-b) + 12px);
+  left:50%;transform:translateX(-50%) translateY(16px);
+  background:#1e293b;color:#fff;border-radius:14px;
+  padding:11px 20px;font-size:13px;font-weight:700;
+  opacity:0;pointer-events:none;transition:all .26s ease;
+  white-space:nowrap;z-index:999;
+  max-width:88vw;text-align:center;
+  box-shadow:0 8px 28px rgba(0,0,0,.18);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.ok{background:var(--success);}
+.toast.ng{background:var(--error);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🏥 PPE TRAINER 2</div>
+  <div class="hdr-pills">
+    <div class="pill pill-streak" id="streakPill">🔥 <span id="streakNum">0</span></div>
+    <div class="pill pill-score">⭐ <span id="scoreNum">0</span></div>
+  </div>
+</header>
+
+<div class="content-area">
+
+  <!-- ═══ PLAY TAB ═══ -->
+  <div class="tab-panel active" id="tabPlay">
+
+    <!-- HOME -->
+    <div class="play-home" id="playHome">
+      <div class="home-title">PPE 着脱トレーニング</div>
+      <div class="home-sub">正しい順番でPPEを着脱しよう</div>
+
+      <!-- Avatar select -->
+      <div class="avatar-select">
+        <div class="avatar-select-title">キャラクターを選ぶ</div>
+        <div class="avatar-btns">
+          <button class="avatar-btn selected" id="avatarMannequin" onclick="selectAvatar('mannequin')">
+            <span class="ab-icon">🤖</span>
+            <div class="ab-label">マネキン</div>
+            <div class="ab-sub">3Dイラスト</div>
+          </button>
+          <button class="avatar-btn" id="avatarPhoto" onclick="selectAvatar('photo')">
+            <span class="ab-icon">📷</span>
+            <div class="ab-label">自分の写真</div>
+            <div class="ab-sub">カメラ撮影</div>
+          </button>
+        </div>
+        <!-- Photo preview -->
+        <div id="photoPreviewArea" style="display:none;margin-top:12px;text-align:center;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">撮影済み写真</div>
+          <div style="position:relative;display:inline-block;">
+            <svg width="80" height="116" viewBox="0 0 180 260" style="position:absolute;top:0;left:0;pointer-events:none;z-index:2;">
+              <defs><clipPath id="previewClip"><path d="M60 0 Q90 0 120 0 Q125 10 125 24 Q125 38 110 48 Q120 55 125 70 Q130 85 125 95 L140 95 Q155 95 160 110 L160 175 Q160 188 145 188 L35 188 Q20 188 20 175 L20 110 Q25 95 40 95 L55 95 Q50 85 55 70 Q60 55 70 48 Q55 38 55 24 Q55 10 60 0Z"/></clipPath></defs>
+            </svg>
+            <img id="photoThumb" style="width:80px;height:116px;object-fit:cover;border-radius:12px;border:2px solid var(--border);display:block;" />
+          </div>
+          <button onclick="openCamera()" style="display:block;margin:8px auto 0;background:none;border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:11px;color:var(--muted);cursor:pointer;">撮り直す</button>
+        </div>
+      </div>
+
+      <!-- Mode select -->
+      <div class="mode-grid">
+        <div class="mode-card" onclick="startGame('donning')">
+          <span class="mc-icon">🧤</span>
+          <div class="mc-title">着用</div>
+          <div class="mc-sub">Donning</div>
+        </div>
+        <div class="mode-card" onclick="startGame('doffing')">
+          <span class="mc-icon">🚮</span>
+          <div class="mc-title">脱衣</div>
+          <div class="mc-sub">Doffing</div>
+        </div>
+        <div class="mode-card" onclick="startGame('random')">
+          <span class="mc-icon">🎲</span>
+          <div class="mc-title">ランダム</div>
+          <div class="mc-sub">どちらか出題</div>
+        </div>
+        <div class="mode-card" onclick="startGame('master')">
+          <span class="mc-icon">🏆</span>
+          <div class="mc-title">マスター</div>
+          <div class="mc-sub">着用→脱衣を連続</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CAMERA SCREEN ═══ -->
+    <div class="camera-screen" id="cameraScreen">
+      <div class="cam-title">📷 自分の写真を撮影</div>
+      <div class="cam-hint">シルエットの枠内に体全体が収まるように立って撮影してください</div>
+
+      <div class="cam-viewport">
+        <video id="camVideo" autoplay playsinline muted></video>
+        <!-- Mannequin silhouette guide -->
+        <div class="cam-guide">
+          <svg viewBox="0 0 180 260" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+            <!-- Semi-transparent guide shape -->
+            <defs>
+              <mask id="guideMask">
+                <rect width="180" height="260" fill="white"/>
+                <!-- head -->
+                <ellipse cx="90" cy="40" rx="28" ry="32" fill="black"/>
+                <!-- neck -->
+                <rect x="79" y="68" width="22" height="20" fill="black"/>
+                <!-- torso -->
+                <rect x="42" y="86" width="96" height="96" rx="10" fill="black"/>
+                <!-- left arm -->
+                <rect x="14" y="88" width="30" height="72" rx="10" fill="black"/>
+                <!-- right arm -->
+                <rect x="136" y="88" width="30" height="72" rx="10" fill="black"/>
+                <!-- left leg -->
+                <rect x="50" y="180" width="28" height="72" rx="8" fill="black"/>
+                <!-- right leg -->
+                <rect x="102" y="180" width="28" height="72" rx="8" fill="black"/>
+              </mask>
+            </defs>
+            <!-- dark overlay outside silhouette -->
+            <rect width="180" height="260" fill="rgba(0,0,0,0.5)" mask="url(#guideMask)"/>
+            <!-- outline of silhouette -->
+            <ellipse cx="90" cy="40" rx="28" ry="32" fill="none" stroke="rgba(0,200,255,0.9)" stroke-width="1.5"/>
+            <rect x="79" y="68" width="22" height="20" fill="none" stroke="rgba(0,200,255,0.9)" stroke-width="1.5"/>
+            <rect x="42" y="86" width="96" height="96" rx="10" fill="none" stroke="rgba(0,200,255,0.9)" stroke-width="1.5"/>
+            <rect x="14" y="88" width="30" height="72" rx="10" fill="none" stroke="rgba(0,200,255,0.9)" stroke-width="1.5"/>
+            <rect x="136" y="88" width="30" height="72" rx="10" fill="none" stroke="rgba(0,200,255,0.9)" stroke-width="1.5"/>
+            <rect x="50" y="180" width="28" height="72" rx="8" fill="none" stroke="rgba(0,200,255,0.9)" stroke-width="1.5"/>
+            <rect x="102" y="180" width="28" height="72" rx="8" fill="none" stroke="rgba(0,200,255,0.9)" stroke-width="1.5"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="cam-controls">
+        <button class="cam-btn ghost" onclick="flipCamera()">🔄 カメラ切替</button>
+        <button class="cam-shoot" onclick="shootPhoto()" title="撮影">📸</button>
+        <button class="cam-btn ghost" onclick="triggerFileInput()">🖼 ファイル選択</button>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" onchange="loadImageFile(event)">
+      <button class="cam-btn ghost" style="margin-top:14px;" onclick="cancelCamera()">✕ キャンセル</button>
+
+      <!-- Canvas for capture (hidden) -->
+      <canvas id="captureCanvas" style="display:none;"></canvas>
+    </div>
+
+    <!-- ═══ GAME VIEW ═══ -->
+    <div class="play-game" id="playGame">
+      <div class="mode-banner" id="modeBanner">着用（Donning）</div>
+      <div class="prog-row">
+        <div class="prog-track"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+        <div class="prog-text" id="progText">0 / 0</div>
+      </div>
+      <div class="game-scroll">
+
+        <!-- Mannequin / Photo card -->
+        <div class="mannequin-card">
+          <div class="mcard-label" id="mcLabel">まだ何も着ていません</div>
+          <div class="svg-wrap" id="svgWrap">
+
+            <!-- Base SVG mannequin (shown in mannequin mode) -->
+            <svg viewBox="0 0 180 260" xmlns="http://www.w3.org/2000/svg" id="svgMannequin">
+              <rect x="55" y="95" width="70" height="90" rx="12" fill="#d4b896"/>
+              <rect x="78" y="78" width="24" height="22" rx="6" fill="#c9a87a"/>
+              <ellipse cx="90" cy="58" rx="30" ry="34" fill="#d4b896"/>
+              <ellipse cx="80" cy="52" rx="4" ry="4.5" fill="white"/>
+              <ellipse cx="100" cy="52" rx="4" ry="4.5" fill="white"/>
+              <circle cx="80" cy="53" r="2.5" fill="#3a2a1a"/>
+              <circle cx="100" cy="53" r="2.5" fill="#3a2a1a"/>
+              <path d="M75 46 Q80 43 85 46" stroke="#7a5c3a" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <path d="M95 46 Q100 43 105 46" stroke="#7a5c3a" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <ellipse cx="90" cy="60" rx="3" ry="3.5" fill="#c08060" opacity="0.6"/>
+              <path d="M83 68 Q90 74 97 68" stroke="#a06040" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <ellipse cx="90" cy="30" rx="30" ry="14" fill="#4a3020"/>
+              <rect x="60" y="25" width="60" height="18" rx="8" fill="#4a3020"/>
+              <ellipse cx="60" cy="56" rx="7" ry="9" fill="#c9a87a"/>
+              <ellipse cx="120" cy="56" rx="7" ry="9" fill="#c9a87a"/>
+              <rect x="20" y="95" width="30" height="72" rx="12" fill="#d4b896"/>
+              <rect x="130" y="95" width="30" height="72" rx="12" fill="#d4b896"/>
+              <ellipse cx="35" cy="175" rx="13" ry="11" fill="#c9a87a"/>
+              <ellipse cx="145" cy="175" rx="13" ry="11" fill="#c9a87a"/>
+              <rect x="58" y="182" width="26" height="70" rx="10" fill="#c9a87a"/>
+              <rect x="96" y="182" width="26" height="70" rx="10" fill="#c9a87a"/>
+              <ellipse cx="71" cy="254" rx="15" ry="9" fill="#b8956e"/>
+              <ellipse cx="109" cy="254" rx="15" ry="9" fill="#b8956e"/>
+              <rect x="55" y="175" width="70" height="14" rx="5" fill="#b0c4de" opacity="0.5"/>
+            </svg>
+
+            <!-- Photo SVG (shown in photo mode, hidden otherwise) -->
+            <svg viewBox="0 0 180 260" xmlns="http://www.w3.org/2000/svg" id="svgPhoto" style="display:none;">
+              <defs>
+                <!-- Human-shaped clip path -->
+                <clipPath id="humanClip">
+                  <!-- Head -->
+                  <ellipse cx="90" cy="40" rx="28" ry="32"/>
+                  <!-- Neck -->
+                  <rect x="79" y="68" width="22" height="20"/>
+                  <!-- Torso -->
+                  <rect x="42" y="86" width="96" height="96" rx="10"/>
+                  <!-- Left arm -->
+                  <rect x="14" y="88" width="30" height="72" rx="10"/>
+                  <!-- Right arm -->
+                  <rect x="136" y="88" width="30" height="72" rx="10"/>
+                  <!-- Left leg -->
+                  <rect x="50" y="180" width="28" height="72" rx="8"/>
+                  <!-- Right leg -->
+                  <rect x="102" y="180" width="28" height="72" rx="8"/>
+                </clipPath>
+              </defs>
+              <!-- Photo clipped to human shape -->
+              <image id="photoImg"
+                href="" x="0" y="0" width="180" height="260"
+                preserveAspectRatio="xMidYMid slice"
+                clip-path="url(#humanClip)"/>
+              <!-- Subtle outline -->
+              <ellipse cx="90" cy="40" rx="28" ry="32" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1"/>
+              <rect x="42" y="86" width="96" height="96" rx="10" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1"/>
+              <rect x="14" y="88" width="30" height="72" rx="10" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1"/>
+              <rect x="136" y="88" width="30" height="72" rx="10" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1"/>
+              <rect x="50" y="180" width="28" height="72" rx="8" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1"/>
+              <rect x="102" y="180" width="28" height="72" rx="8" fill="none" stroke="rgba(0,0,0,0.12)" stroke-width="1"/>
+            </svg>
+
+            <!-- PPE Layers (shared between both modes) -->
+            <svg viewBox="0 0 180 260" xmlns="http://www.w3.org/2000/svg" class="ppe-layer" id="layer-gown">
+              <rect x="40" y="88" width="100" height="106" rx="14" fill="#b3d9ff" opacity="0.92"/>
+              <rect x="10" y="90" width="36" height="76" rx="12" fill="#b3d9ff" opacity="0.92"/>
+              <rect x="134" y="90" width="36" height="76" rx="12" fill="#b3d9ff" opacity="0.92"/>
+              <rect x="40" y="172" width="100" height="30" rx="8" fill="#9dcfff" opacity="0.9"/>
+              <path d="M78 88 Q90 82 102 88" stroke="#7ab8f5" stroke-width="3" fill="none" stroke-linecap="round"/>
+              <line x1="90" y1="90" x2="90" y2="185" stroke="#7ab8f5" stroke-width="1.5" opacity="0.5" stroke-dasharray="4,4"/>
+              <rect x="8" y="158" width="40" height="12" rx="6" fill="#7ab8f5" opacity="0.8"/>
+              <rect x="132" y="158" width="40" height="12" rx="6" fill="#7ab8f5" opacity="0.8"/>
+            </svg>
+
+            <svg viewBox="0 0 180 260" xmlns="http://www.w3.org/2000/svg" class="ppe-layer" id="layer-mask">
+              <path d="M62 56 Q90 78 118 56 Q118 82 90 86 Q62 82 62 56 Z" fill="white" stroke="#b0b8c4" stroke-width="1.5"/>
+              <path d="M64 62 Q90 72 116 62" stroke="#d0d8e0" stroke-width="1" fill="none"/>
+              <path d="M63 68 Q90 79 117 68" stroke="#d0d8e0" stroke-width="1" fill="none"/>
+              <path d="M64 74 Q90 84 116 74" stroke="#d0d8e0" stroke-width="1" fill="none"/>
+              <path d="M62 58 Q50 60 52 70 Q54 78 62 76" stroke="#b0b8c4" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <path d="M118 58 Q130 60 128 70 Q126 78 118 76" stroke="#b0b8c4" stroke-width="2" fill="none" stroke-linecap="round"/>
+              <path d="M72 58 Q90 56 108 58" stroke="#8090a0" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            </svg>
+
+            <svg viewBox="0 0 180 260" xmlns="http://www.w3.org/2000/svg" class="ppe-layer" id="layer-goggles">
+              <rect x="56" y="44" width="68" height="24" rx="8" fill="#2a3545" opacity="0.9"/>
+              <rect x="58" y="46" width="28" height="20" rx="6" fill="#a8d8f0" opacity="0.6"/>
+              <rect x="94" y="46" width="28" height="20" rx="6" fill="#a8d8f0" opacity="0.6"/>
+              <rect x="84" y="50" width="12" height="12" rx="3" fill="#2a3545" opacity="0.9"/>
+              <path d="M56 54 Q38 56 38 60 Q38 64 56 64" stroke="#2a3545" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.8"/>
+              <path d="M124 54 Q142 56 142 60 Q142 64 124 64" stroke="#2a3545" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.8"/>
+              <path d="M62 49 Q70 48 72 52" stroke="white" stroke-width="1.5" fill="none" opacity="0.5" stroke-linecap="round"/>
+              <path d="M98 49 Q106 48 108 52" stroke="white" stroke-width="1.5" fill="none" opacity="0.5" stroke-linecap="round"/>
+            </svg>
+
+            <svg viewBox="0 0 180 260" xmlns="http://www.w3.org/2000/svg" class="ppe-layer" id="layer-gloves">
+              <rect x="12" y="158" width="36" height="22" rx="8" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.5"/>
+              <ellipse cx="30" cy="158" rx="18" ry="9" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.5"/>
+              <rect x="13" y="148" width="8" height="14" rx="4" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <rect x="23" y="144" width="8" height="16" rx="4" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <rect x="33" y="144" width="8" height="16" rx="4" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <rect x="42" y="148" width="7" height="13" rx="3.5" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <ellipse cx="13" cy="165" rx="5" ry="7" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2" transform="rotate(-20,13,165)"/>
+              <rect x="132" y="158" width="36" height="22" rx="8" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.5"/>
+              <ellipse cx="150" cy="158" rx="18" ry="9" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.5"/>
+              <rect x="159" y="148" width="8" height="14" rx="4" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <rect x="149" y="144" width="8" height="16" rx="4" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <rect x="139" y="144" width="8" height="16" rx="4" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <rect x="131" y="148" width="7" height="13" rx="3.5" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2"/>
+              <ellipse cx="167" cy="165" rx="5" ry="7" fill="#b2dfdb" stroke="#80cbc4" stroke-width="1.2" transform="rotate(20,167,165)"/>
+              <rect x="12" y="178" width="36" height="5" rx="2.5" fill="#80cbc4" opacity="0.7"/>
+              <rect x="132" y="178" width="36" height="5" rx="2.5" fill="#80cbc4" opacity="0.7"/>
+            </svg>
+
+            <svg viewBox="0 0 180 260" xmlns="http://www.w3.org/2000/svg" class="ppe-layer" id="layer-alcohol">
+              <circle cx="35" cy="175" r="16" fill="#e0f7fa" opacity="0.75"/>
+              <circle cx="145" cy="175" r="16" fill="#e0f7fa" opacity="0.75"/>
+              <line x1="20" y1="160" x2="16" y2="154" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="35" y1="156" x2="35" y2="149" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="50" y1="160" x2="54" y2="154" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="17" y1="175" x2="9" y2="175" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="53" y1="175" x2="61" y2="175" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <text x="26" y="172" font-size="15" fill="#00acc1" opacity="0.9">✦</text>
+              <line x1="130" y1="160" x2="126" y2="154" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="145" y1="156" x2="145" y2="149" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="160" y1="160" x2="164" y2="154" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="127" y1="175" x2="119" y2="175" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <line x1="163" y1="175" x2="171" y2="175" stroke="#00bcd4" stroke-width="2" stroke-linecap="round"/>
+              <text x="136" y="172" font-size="15" fill="#00acc1" opacity="0.9">✦</text>
+              <text x="90" y="144" text-anchor="middle" font-size="9" fill="#0097a7" font-family="sans-serif" font-weight="bold" opacity="0.9">手指消毒中…</text>
+              <rect x="82" y="208" width="16" height="26" rx="4" fill="#e0f7fa" stroke="#80deea" stroke-width="1.5"/>
+              <rect x="85" y="205" width="10" height="5" rx="2" fill="#80deea"/>
+              <text x="90" y="224" text-anchor="middle" font-size="7" fill="#0097a7" font-family="sans-serif">OH</text>
+            </svg>
+
+          </div><!-- /svg-wrap -->
+          <div class="worn-strip" id="wornStrip"></div>
+        </div>
+
+        <div class="inst-card">
+          <div class="inst-q" id="instQ">次に何をする？</div>
+          <div class="inst-s" id="instS">下のボタンをタップしてください</div>
+          <div class="hint-box" id="hintBox"></div>
+        </div>
+
+        <div class="ppe-grid" id="ppeGrid"></div>
+      </div>
+    </div>
+
+    <!-- COMPLETION -->
+    <div class="play-done" id="playDone">
+      <div class="done-em" id="doneEm">🏆</div>
+      <div class="done-title" id="doneTitle">完璧！</div>
+      <div class="done-sub" id="doneSub">ミスなしクリア</div>
+      <div class="stars" id="doneStars">⭐⭐⭐</div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-val" id="sErr">0</div><div class="stat-key">ミス</div></div>
+        <div class="stat-box"><div class="stat-val" id="sTime">0s</div><div class="stat-key">時間</div></div>
+        <div class="stat-box"><div class="stat-val" id="sPt">+0</div><div class="stat-key">獲得pt</div></div>
+      </div>
+      <div class="review-card">
+        <h3 id="rvTitle">正しい手順</h3>
+        <div id="rvSteps"></div>
+      </div>
+      <button class="btn-a primary" id="nextBtn" onclick="nextRound()">次のモードへ →</button>
+      <button class="btn-a ghost" onclick="goHome()">メニューに戻る</button>
+    </div>
+
+  </div><!-- /tabPlay -->
+
+  <!-- ═══ GUIDE TAB ═══ -->
+  <div class="tab-panel" id="tabGuide">
+    <div class="tab-scroll">
+      <div class="gs">
+        <h2>🎮 使い方</h2>
+        <p>ホーム画面でキャラクター（マネキン or 自分の写真）とモードを選んでスタート。正しいPPEをタップするとキャラクターに装備が付きます。2回ミスするとヒントが表示されます。</p>
+        <p>📷 写真モードでは、カメラを起動してシルエット枠内に体を合わせて撮影。写真がマネキン形に切り抜かれてキャラクターとして使われます。</p>
+      </div>
+      <div class="gs">
+        <h2>🧤 着用の順番（Donning）</h2>
+        <div class="seq-card">
+          <div class="seq-head">着用 — 5ステップ</div>
+          <div class="seq-step"><div class="seq-n">1</div><div class="seq-ic">🧴</div><div><div class="seq-nm">アルコール手指消毒</div><div class="seq-wh">PPEを装着する前に手を清潔にする</div></div></div>
+          <div class="seq-step"><div class="seq-n">2</div><div class="seq-ic">🧥</div><div><div class="seq-nm">ガウン</div><div class="seq-wh">身体を覆うものを最初に装着する</div></div></div>
+          <div class="seq-step"><div class="seq-n">3</div><div class="seq-ic">😷</div><div><div class="seq-nm">マスク</div><div class="seq-wh">ゴーグルより先に装着し、ゴーグルで押さえる</div></div></div>
+          <div class="seq-step"><div class="seq-n">4</div><div class="seq-ic">🥽</div><div><div class="seq-nm">ゴーグル</div><div class="seq-wh">マスクの上からかけて固定する</div></div></div>
+          <div class="seq-step"><div class="seq-n">5</div><div class="seq-ic">🧤</div><div><div class="seq-nm">グローブ</div><div class="seq-wh">最後に装着し、ガウンの袖口を覆う</div></div></div>
+        </div>
+      </div>
+      <div class="gs">
+        <h2>🚮 脱衣の順番（Doffing）</h2>
+        <p>脱衣は汚染を広げないことが目的です。最も汚染された部位から外し、都度手指消毒を行います。</p>
+        <div class="seq-card">
+          <div class="seq-head doff">脱衣 — 6ステップ</div>
+          <div class="seq-step"><div class="seq-n doff">1</div><div class="seq-ic">🧤</div><div><div class="seq-nm">グローブ</div><div class="seq-wh">最も汚染されているグローブを最初に外す</div></div></div>
+          <div class="seq-step"><div class="seq-n doff">2</div><div class="seq-ic">🧴</div><div><div class="seq-nm">アルコール手指消毒</div><div class="seq-wh">グローブを外した直後に必ず手指消毒</div></div></div>
+          <div class="seq-step"><div class="seq-n doff">3</div><div class="seq-ic">🧥</div><div><div class="seq-nm">ガウン</div><div class="seq-wh">内側に丸めながら脱ぎ、外側に触れない</div></div></div>
+          <div class="seq-step"><div class="seq-n doff">4</div><div class="seq-ic">🥽</div><div><div class="seq-nm">ゴーグル</div><div class="seq-wh">後ろのストラップをつかんで外す。前面に触れない</div></div></div>
+          <div class="seq-step"><div class="seq-n doff">5</div><div class="seq-ic">😷</div><div><div class="seq-nm">マスク</div><div class="seq-wh">最後に外す。マスク外側に触れない</div></div></div>
+          <div class="seq-step"><div class="seq-n doff">6</div><div class="seq-ic">🧴</div><div><div class="seq-nm">アルコール手指消毒</div><div class="seq-wh">すべて外した後も必ず手指消毒で締める</div></div></div>
+        </div>
+      </div>
+      <div class="gs">
+        <h2>⚠️ 重要なポイント</h2>
+        <ul class="key-list">
+          <li>PPEの外側（汚染面）には素手で触れない</li>
+          <li>ガウンは内側（清潔面）を外側にして丸めながら脱ぐ</li>
+          <li>ゴーグルは前面でなく後ろのストラップ部分をつかむ</li>
+          <li>マスクは最後。ひも（またはゴム）部分のみを持って外す</li>
+          <li>手指消毒はグローブ脱衣直後と、全脱衣後の2回実施</li>
+          <li>当院の手順が参考リンクの動画と一部異なる場合がある（リンクタブ参照）</li>
+        </ul>
+      </div>
+      <div class="footer-note">
+        本テキストはAI（Claude, Anthropic）を用いて作成されました。内容には誤りが含まれる可能性があります。医療上の判断には必ず公式の教科書・文献・専門家の指導を参照してください。二次利用・再配布は自己責任のもとで可能です。その際、本注記の保持を推奨します。
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ LINKS TAB ═══ -->
+  <div class="tab-panel" id="tabLinks">
+    <div class="tab-scroll">
+      <div class="gs">
+        <h2>🔗 参考リンク</h2>
+        <a class="lk-card" href="https://www.who.int/publications/m/item/five-moments-for-hand-hygiene" target="_blank" rel="noopener">
+          <div class="lk-top">
+            <div class="lk-icon">🌍</div>
+            <div><div class="lk-title">WHO「5 Moments for Hand Hygiene」</div><div class="lk-org">World Health Organization（WHO）</div><div class="lk-desc">WHOが提唱する手指衛生の5つのタイミングの公式ページ。</div></div>
+          </div>
+          <div class="lk-url">↗ who.int</div>
+        </a>
+        <a class="lk-card" href="https://www.youtube.com/watch?v=p2LX1baRKGA" target="_blank" rel="noopener">
+          <div class="lk-top">
+            <div class="lk-icon">▶️</div>
+            <div><div class="lk-title">ガウンテクニック（動画解説）</div><div class="lk-org">看護roo!【公式】YouTube</div><div class="lk-desc">PPE着脱の映像解説。実際の動きと手順を視覚的に確認できます。</div></div>
+          </div>
+          <div class="lk-note">⚠️ 当院のやり方と脱衣の順番が一部異なります。本アプリの手順を優先してください。</div>
+          <div class="lk-url">↗ youtube.com</div>
+        </a>
+        <a class="lk-card" href="https://somekata.github.io/bactVR/PPE/index.html" target="_blank" rel="noopener">
+          <div class="lk-top">
+            <div class="lk-icon">🥽</div>
+            <div><div class="lk-title">PPE Training Room</div><div class="lk-org">somekata.github.io / bactVR</div><div class="lk-desc">PPE着脱をマネキンで学べるWebアプリ（関連ツール）。</div></div>
+          </div>
+          <div class="lk-url">↗ somekata.github.io</div>
+        </a>
+        <div class="info-box">📌 外部リンクは新しいタブで開きます。各サイトの利用規約に従ってご利用ください。</div>
+      </div>
+      <div class="footer-note">
+        本テキストはAI（Claude, Anthropic）を用いて作成されました。内容には誤りが含まれる可能性があります。医療上の判断には必ず公式の教科書・文献・専門家の指導を参照してください。二次利用・再配布は自己責任のもとで可能です。その際、本注記の保持を推奨します。
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content-area -->
+
+<nav class="bottom-tabs">
+  <button class="tab-btn active" id="tbPlay" onclick="switchTab('Play')"><span class="ti">🎮</span><span class="tl">プレイ</span></button>
+  <button class="tab-btn" id="tbGuide" onclick="switchTab('Guide')"><span class="ti">📖</span><span class="tl">解説</span></button>
+  <button class="tab-btn" id="tbLinks" onclick="switchTab('Links')"><span class="ti">🔗</span><span class="tl">リンク</span></button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════
+// TAB
+// ════════════════════════════════════
+function switchTab(n) {
+  ['Play','Guide','Links'].forEach(t => {
+    document.getElementById('tab'+t).classList.toggle('active', t===n);
+    document.getElementById('tb'+t).classList.toggle('active', t===n);
+  });
+}
+
+// ════════════════════════════════════
+// DATA
+// ════════════════════════════════════
+const PPE_DEF = {
+  alcohol: { emoji:'🧴', name:'アルコール', layer:'layer-alcohol' },
+  gown:    { emoji:'🧥', name:'ガウン',     layer:'layer-gown'    },
+  mask:    { emoji:'😷', name:'マスク',     layer:'layer-mask'    },
+  goggles: { emoji:'🥽', name:'ゴーグル',   layer:'layer-goggles' },
+  gloves:  { emoji:'🧤', name:'グローブ',   layer:'layer-gloves'  },
+};
+const DONNING = [
+  { key:'alcohol', reason:'まず手指消毒でベースを清潔に' },
+  { key:'gown',    reason:'身体全体を覆うガウンを先に装着' },
+  { key:'mask',    reason:'ゴーグルより前にマスクを装着' },
+  { key:'goggles', reason:'マスクの上からゴーグルを固定' },
+  { key:'gloves',  reason:'最後にグローブで手を保護' },
+];
+const DOFFING = [
+  { key:'gloves',  reason:'最も汚染されたグローブから' },
+  { key:'alcohol', reason:'グローブ外し後すぐ手指消毒' },
+  { key:'gown',    reason:'内側に丸めながら前で外す' },
+  { key:'goggles', reason:'後ろのストラップをつかんで外す' },
+  { key:'mask',    reason:'最後はマスク。外側に触れない' },
+  { key:'alcohol', reason:'全脱衣後も必ず手指消毒' },
+];
+
+// ════════════════════════════════════
+// STATE
+// ════════════════════════════════════
+const G = {
+  mode: null, seq: [], step: 0,
+  mistakes: 0,
+  streak: +localStorage.getItem('ppeStreak')||0,
+  score:   +localStorage.getItem('ppeScore')||0,
+  t0: 0, hintShown: false,
+  wornKeys: new Set(),
+  masterPhase: 0,
+  // photo mode
+  avatarMode: 'mannequin', // 'mannequin' | 'photo'
+  photoDataURL: null,
+};
+
+// ════════════════════════════════════
+// AVATAR SELECT
+// ════════════════════════════════════
+function selectAvatar(mode) {
+  G.avatarMode = mode;
+  document.getElementById('avatarMannequin').classList.toggle('selected', mode==='mannequin');
+  document.getElementById('avatarPhoto').classList.toggle('selected', mode==='photo');
+
+  if (mode === 'photo') {
+    if (G.photoDataURL) {
+      // Already have a photo — show it
+      document.getElementById('photoPreviewArea').style.display = 'block';
+    } else {
+      openCamera();
+    }
+  } else {
+    document.getElementById('photoPreviewArea').style.display = 'none';
+  }
+}
+
+// ════════════════════════════════════
+// CAMERA
+// ════════════════════════════════════
+let camStream = null;
+let facingMode = 'user'; // selfie by default
+
+function openCamera() {
+  document.getElementById('cameraScreen').classList.add('visible');
+  startStream();
+}
+
+function cancelCamera() {
+  stopStream();
+  document.getElementById('cameraScreen').classList.remove('visible');
+  // If no photo yet, revert to mannequin
+  if (!G.photoDataURL) {
+    G.avatarMode = 'mannequin';
+    document.getElementById('avatarMannequin').classList.add('selected');
+    document.getElementById('avatarPhoto').classList.remove('selected');
+  }
+}
+
+async function startStream() {
+  stopStream();
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode, width: { ideal: 720 }, height: { ideal: 1280 } },
+      audio: false
+    });
+    const video = document.getElementById('camVideo');
+    video.srcObject = camStream;
+    // Mirror only for selfie cam
+    video.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+  } catch(e) {
+    showToast('カメラにアクセスできません', 'ng', 2500);
+    cancelCamera();
+  }
+}
+
+function stopStream() {
+  if (camStream) {
+    camStream.getTracks().forEach(t => t.stop());
+    camStream = null;
+  }
+}
+
+function flipCamera() {
+  facingMode = facingMode === 'user' ? 'environment' : 'user';
+  startStream();
+}
+
+function shootPhoto() {
+  const video = document.getElementById('camVideo');
+  const canvas = document.getElementById('captureCanvas');
+  // Use video's natural dimensions
+  const vw = video.videoWidth  || 480;
+  const vh = video.videoHeight || 640;
+  canvas.width  = vw;
+  canvas.height = vh;
+  const ctx = canvas.getContext('2d');
+  if (facingMode === 'user') {
+    // un-mirror for storage
+    ctx.translate(vw, 0);
+    ctx.scale(-1, 1);
+  }
+  ctx.drawImage(video, 0, 0, vw, vh);
+  const dataURL = canvas.toDataURL('image/jpeg', 0.85);
+  applyPhoto(dataURL);
+}
+
+function triggerFileInput() {
+  document.getElementById('fileInput').click();
+}
+
+function loadImageFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => applyPhoto(ev.target.result);
+  reader.readAsDataURL(file);
+  // Reset input so same file can be reloaded
+  e.target.value = '';
+}
+
+function applyPhoto(dataURL) {
+  G.photoDataURL = dataURL;
+
+  // Update thumbnail
+  document.getElementById('photoThumb').src = dataURL;
+  document.getElementById('photoPreviewArea').style.display = 'block';
+
+  // Apply to game SVG
+  document.getElementById('photoImg').setAttribute('href', dataURL);
+
+  stopStream();
+  document.getElementById('cameraScreen').classList.remove('visible');
+  showToast('📷 写真を設定しました！', 'ok', 1400);
+}
+
+// ════════════════════════════════════
+// AVATAR SWITCH IN GAME
+// ════════════════════════════════════
+function applyAvatarToGame() {
+  const isPhoto = G.avatarMode === 'photo' && G.photoDataURL;
+  document.getElementById('svgMannequin').style.display = isPhoto ? 'none' : 'block';
+  document.getElementById('svgPhoto').style.display     = isPhoto ? 'block' : 'none';
+  if (isPhoto) {
+    document.getElementById('photoImg').setAttribute('href', G.photoDataURL);
+  }
+}
+
+// ════════════════════════════════════
+// HOME / NAV
+// ════════════════════════════════════
+function goHome() {
+  document.getElementById('playHome').style.display  = '';
+  document.getElementById('playGame').classList.remove('visible');
+  document.getElementById('playDone').classList.remove('visible');
+  clearAllLayers();
+}
+
+function showGameView() {
+  document.getElementById('playHome').style.display  = 'none';
+  document.getElementById('playGame').classList.add('visible');
+  document.getElementById('playDone').classList.remove('visible');
+}
+
+function showDoneView() {
+  document.getElementById('playHome').style.display  = 'none';
+  document.getElementById('playGame').classList.remove('visible');
+  document.getElementById('playDone').classList.add('visible');
+}
+
+// ════════════════════════════════════
+// START GAME
+// ════════════════════════════════════
+function startGame(mode) {
+  // If photo mode selected but no photo yet, open camera first
+  if (G.avatarMode === 'photo' && !G.photoDataURL) {
+    G._pendingMode = mode;
+    openCamera();
+    return;
+  }
+
+  G.mode = mode; G.step = 0; G.mistakes = 0;
+  G.hintShown = false; G.masterPhase = 0;
+  G.wornKeys.clear(); clearAllLayers();
+
+  if (mode === 'random') {
+    const isDonning = Math.random() < 0.5;
+    G.mode = isDonning ? 'donning' : 'doffing';
+    G.seq  = isDonning ? [...DONNING] : [...DOFFING];
+    if (!isDonning) fullyDress();
+  } else if (mode === 'master') {
+    G.seq = [...DONNING];
+  } else if (mode === 'donning') {
+    G.seq = [...DONNING];
+  } else {
+    G.seq = [...DOFFING];
+    fullyDress();
+  }
+
+  G.t0 = Date.now();
+  applyAvatarToGame();
+  showGameView();
+  renderGame();
+}
+
+function fullyDress() {
+  ['gown','mask','goggles','gloves'].forEach(k => {
+    document.getElementById(PPE_DEF[k].layer).classList.add('worn');
+    G.wornKeys.add(k);
+  });
+  updateStrip();
+}
+
+function clearAllLayers() {
+  Object.values(PPE_DEF).forEach(p => {
+    const el = document.getElementById(p.layer);
+    el.classList.remove('worn','removing');
+  });
+  document.getElementById('wornStrip').innerHTML = '';
+}
+
+// ════════════════════════════════════
+// RENDER
+// ════════════════════════════════════
+function renderGame() {
+  const { step, seq, mode, masterPhase } = G;
+  const total = seq.length;
+  const isDoff = mode==='doffing' || (mode==='master' && masterPhase===1);
+
+  const banner = document.getElementById('modeBanner');
+  banner.textContent = isDoff ? '脱衣（Doffing）' : '着用（Donning）';
+  banner.className = 'mode-banner' + (isDoff ? ' doffing' : '');
+
+  document.getElementById('progFill').style.width = `${(step/total)*100}%`;
+  document.getElementById('progText').textContent = `${step} / ${total}`;
+
+  document.getElementById('mcLabel').textContent =
+    isDoff ? (step===0?'完全装備中':`${step}つ外しました`) :
+             (step===0?'まだ何も着ていません':`${step}つ装着済み`);
+
+  document.getElementById('instQ').textContent = `${step+1}番目：次に何をする？`;
+  document.getElementById('instS').textContent = 'タップして選んでください';
+  document.getElementById('hintBox').classList.remove('visible');
+
+  const keys = [...new Set(seq.map(s=>s.key))];
+  const shuffled = [...keys].sort(()=>Math.random()-0.5);
+  const grid = document.getElementById('ppeGrid');
+  grid.className = 'ppe-grid' + (shuffled.length<=4?' cols2':'');
+  grid.innerHTML = shuffled.map(k => {
+    const p = PPE_DEF[k];
+    return `<button class="ppe-btn" id="pbtn-${k}" onclick="handleTap('${k}')">
+      <span class="pb-em">${p.emoji}</span>
+      <span class="pb-nm">${p.name}</span>
+    </button>`;
+  }).join('');
+
+  updateHeader();
+}
+
+// ════════════════════════════════════
+// INTERACTION
+// ════════════════════════════════════
+function handleTap(key) {
+  const correct = G.seq[G.step].key;
+  if (key === correct) onCorrect(key);
+  else onWrong(key, correct);
+}
+
+function onCorrect(key) {
+  const btn = document.getElementById(`pbtn-${key}`);
+  if (btn) btn.classList.add('flash-ok');
+
+  G.streak++;
+  localStorage.setItem('ppeStreak', G.streak);
+
+  const isDoff = G.mode==='doffing' || (G.mode==='master' && G.masterPhase===1);
+  isDoff ? removePPE(key) : addPPE(key);
+
+  showToast('✅ 正解！', 'ok', 750);
+  G.step++;
+
+  setTimeout(() => {
+    if (G.step >= G.seq.length) {
+      if (G.mode==='master' && G.masterPhase===0) {
+        G.masterPhase = 1;
+        G.seq = [...DOFFING];
+        G.step = 0;
+        G.hintShown = false;
+        fullyDress();
+        showToast('🎯 着用完了！次は脱衣です', 'ok', 1600);
+        setTimeout(renderGame, 1700);
+      } else {
+        showCompletion();
+      }
+    } else {
+      renderGame();
+    }
+  }, 480);
+}
+
+function onWrong(key, correct) {
+  G.mistakes++;
+  G.streak = 0;
+  localStorage.setItem('ppeStreak', 0);
+
+  const btn = document.getElementById(`pbtn-${key}`);
+  if (btn) { btn.classList.add('shake'); setTimeout(()=>btn.classList.remove('shake'),480); }
+
+  const cp = PPE_DEF[correct];
+  showToast(`❌ → ${cp.emoji} ${cp.name}`, 'ng', 1800);
+
+  if (G.mistakes >= 2 && !G.hintShown) {
+    G.hintShown = true;
+    setTimeout(() => {
+      const h = document.getElementById('hintBox');
+      h.textContent = `💡 ${cp.emoji} ${cp.name}：${G.seq[G.step].reason}`;
+      h.classList.add('visible');
+    }, 1900);
+  }
+  updateHeader();
+}
+
+// ════════════════════════════════════
+// PPE LAYERS
+// ════════════════════════════════════
+function addPPE(key) {
+  const el = document.getElementById(PPE_DEF[key].layer);
+  if (!el) return;
+  el.classList.remove('removing');
+  el.classList.add('worn');
+  G.wornKeys.add(key);
+  updateStrip();
+  if (key === 'alcohol') setTimeout(() => el.classList.remove('worn'), 800);
+}
+
+function removePPE(key) {
+  const el = document.getElementById(PPE_DEF[key].layer);
+  if (!el) return;
+  el.classList.add('removing');
+  setTimeout(()=>el.classList.remove('worn','removing'), 280);
+  G.wornKeys.delete(key);
+  updateStrip();
+}
+
+function updateStrip() {
+  const strip = document.getElementById('wornStrip');
+  const chips = [...G.wornKeys].filter(k=>k!=='alcohol').map(k => {
+    const p = PPE_DEF[k];
+    return `<div class="worn-chip">${p.emoji} ${p.name}</div>`;
+  });
+  strip.innerHTML = chips.length
+    ? chips.join('')
+    : '<span style="font-size:11px;color:var(--muted)">—</span>';
+}
+
+// ════════════════════════════════════
+// COMPLETION
+// ════════════════════════════════════
+function showCompletion() {
+  const elapsed = Math.round((Date.now()-G.t0)/1000);
+  const err = G.mistakes;
+  const pts = Math.max(10, 100 - err*10);
+  G.score += pts;
+  localStorage.setItem('ppeScore', G.score);
+
+  document.getElementById('doneEm').textContent    = err===0?'🏆':err<=2?'😊':'💪';
+  document.getElementById('doneTitle').textContent = err===0?'完璧です！':err<=2?'よくできました！':'お疲れ様！';
+  document.getElementById('doneSub').textContent   = err===0?'ミスなしクリア':`ミス ${err}回`;
+  document.getElementById('doneStars').textContent = err===0?'⭐⭐⭐':err<=2?'⭐⭐':'⭐';
+  document.getElementById('sErr').textContent  = err;
+  document.getElementById('sTime').textContent = elapsed+'s';
+  document.getElementById('sPt').textContent   = '+'+pts;
+
+  const seq = G.mode==='master' ? [...DONNING,...DOFFING] : G.seq;
+  document.getElementById('rvTitle').textContent =
+    G.mode==='master'?'正しい手順（着用・脱衣）':G.mode==='doffing'?'正しい脱衣の手順':'正しい着用の手順';
+  document.getElementById('rvSteps').innerHTML = seq.map((s,i) => {
+    const p = PPE_DEF[s.key];
+    return `<div class="rv-step">
+      <div class="rv-num">${i+1}</div>
+      <div class="rv-emoji">${p.emoji}</div>
+      <div class="rv-text"><div class="rv-name">${p.name}</div><div class="rv-reason">${s.reason}</div></div>
+    </div>`;
+  }).join('');
+
+  const nb = document.getElementById('nextBtn');
+  if (G.mode==='donning')      { nb.textContent='脱衣に挑戦 →';       nb.dataset.next='doffing'; }
+  else if (G.mode==='doffing') { nb.textContent='着用に挑戦 →';       nb.dataset.next='donning'; }
+  else                         { nb.textContent='もう一度マスター →'; nb.dataset.next='master';  }
+
+  showDoneView();
+}
+
+function nextRound() {
+  startGame(document.getElementById('nextBtn').dataset.next || 'donning');
+}
+
+// ════════════════════════════════════
+// HEADER
+// ════════════════════════════════════
+function updateHeader() {
+  document.getElementById('scoreNum').textContent = G.score;
+  document.getElementById('streakNum').textContent = G.streak;
+  document.getElementById('streakPill').classList.toggle('visible', G.streak >= 2);
+}
+
+// ════════════════════════════════════
+// TOAST
+// ════════════════════════════════════
+let toastT = null;
+function showToast(msg, type='ok', dur=1400) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  clearTimeout(toastT);
+  toastT = setTimeout(()=>{ t.className='toast'; }, dur);
+}
+
+// INIT
+updateHeader();
+</script>
+</body>
+</html>
