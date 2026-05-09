@@ -1055,8 +1055,10 @@ function startGame(mode) {
   G.wornKeys.clear(); clearAllLayers();
 
   if (mode === 'random') {
-    G.seq = Math.random()<0.5 ? [...DONNING] : [...DOFFING];
-    G.mode = G.seq === DONNING ? 'donning' : 'doffing';
+    const isDonning = Math.random() < 0.5;
+    G.mode = isDonning ? 'donning' : 'doffing';
+    G.seq  = isDonning ? [...DONNING] : [...DOFFING];
+    if (!isDonning) fullyDress();
   } else if (mode === 'master') {
     G.seq = [...DONNING];
   } else if (mode === 'donning') {
