@@ -1,1 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gram Stain Master</title>
+    <style>
+        :root {
+            --cv-color: #6f42c1;
+            --lugol-color: #ffc107;
+            --pa-color: #f1f508; /* ピクリン酸 */
+            --safranin-color: #ff66b2;
+            --fuchsin-color: #e91e63;
+            --wash-color: #00b4d8;
+        }
 
+        body { font-family: -apple-system, sans-serif; background: #eceff1; margin: 0; display: flex; justify-content: center; padding: 10px; }
+        .app-container { width: 100%; max-width: 480px; background: white; border-radius: 20px; padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        
+        /* 顕微鏡ビュー */
+        .microscope-view {
+            width: 100%; aspect-ratio: 4/3; background: #fff; border: 4px solid #333; border-radius: 12px;
+            margin-bottom: 10px; position: relative; overflow: hidden; display: flex; flex-wrap: wrap; align-content: center; justify-content: center;
+        }
+        .bacillus { width: 30px; height: 8px; margin: 6px; border-radius: 5px; background: rgba(0,0,0,0.05); transition: all 0.5s; }
+
+        /* パネル情報 */
+        .info-panel { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; font-family: monospace; }
+        .timer-badge { background: #263238; color: #00e676; padding: 2px 8px; border-radius: 4px; }
+        .status-box { background: #263238; color: #fff; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 12px; min-height: 45px; border-left: 5px solid var(--wash-color); }
+
+        /* ボタンUI */
+        .grid-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        button { padding: 12px 5px; border: none; border-radius: 10px; font-weight: bold; font-size: 12px; cursor: pointer; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
+        button:active { transform: scale(0.96); }
+        
+        .btn-cv { background: var(--cv-color); color: white; }
+        .btn-lugol { background: var(--lugol-color); }
+        .btn-pa { background: var(--pa-color); color: black; }
+        .btn-counter { background: #555; color: white; }
+        .btn-wash { background: var(--wash-color); color: white; grid-column: span 2; }
+        .btn-dry { background: #90a4ae; color: white; }
+        .btn-obs { background: #000; color: white; grid-column: span 2; }
+
+        /* セレクター画面 */
+        #selector-screen, #result-screen {
+            position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9);
+            z-index:1000; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 手法選択 -->
+<div id="selector-screen">
+    <h2>グラム染色法を選択</h2>
+    <button onclick="init('hucker')" style="background:var(--safranin-color); width:220px; margin:10px; padding:20px;">ハッカー法<br><small>(標準的/媒染・脱色別々)</small></button>
+    <button onclick="init('favor')" style="background:var(--fuchsin-color); width:220px; margin:10px; padding:20px;">フェイバー法<br><small>(ピクリン酸/媒染・脱色同時)</small></button>
+</div>
+
+<div class="app-container">
+    <div class="info-panel">
+        <div>SCORE: <span id="score">100</span></div>
+        <div class="timer-badge">TIME: <span id="timer">0</span>s</div>
+    </div>
+    <div class="microscope-view" id="view"></div>
+    <div class="status-box" id="msg">手法を選択してください。</div>
+
+    <div class="grid-controls">
+        <button class="btn-cv" onclick="act('cv')">1. クリスタル紫</button>
+        <button class="btn-lugol" id="btn-lugol" onclick="act('lugol')">2. ルゴール(媒染)</button>
+        <button class="btn-pa" id="btn-pa" onclick="act('pa')">2. ピクリン酸Alc(媒染・脱色)</button>
+        <button class="btn-alc" id="btn-alc" onclick="act('alc')" style="background:#6c757d; color:white;">3. アルコール脱色</button>
+        <button class="btn-counter" id="btn-counter" onclick="act('counter')">後染色</button>
+        <button class="btn-wash" onclick="act('wash')">水洗</button>
+        <button class="btn-dry" onclick="act('dry')">乾燥</button>
+        <button class="btn-obs" onclick="act('obs')">観察</button>
+    </div>
+    <button onclick="location.reload()" style="width:100%; margin-top:10px; background:none; border:none; color:#999; font-size:10px;">RESET</button>
+</div>
+
+<div id="result-screen" style="display:none;">
+    <h1 id="res-score"></h1>
+    <p id="res-type" style="font-size:20px; color:var(--lugol-color);"></p>
+    <p id="res-comm" style="padding:20px; line-height:1.6;"></p>
+    <button onclick="location.reload()" style="padding:10px 30px; border-radius:20px; border:none;">トップに戻る</button>
+</div>
+
+<script>
+    let mode = ''; // 'hucker' or 'favor'
+    let stepIdx = 0;
+    let score = 100;
+    const isPositive = Math.random() > 0.5;
+    
+    // 手順の定義
+    const orders = {
+        hucker: ['cv', 'wash', 'lugol', 'wash', 'alc', 'wash', 'counter', 'wash', 'dry', 'obs'],
+        favor:  ['cv', 'wash', 'pa', 'wash', 'counter', 'wash', 'dry', 'obs']
+    };
+
+    const config = {
+        cv: { name: "クリスタル紫", time: 60, color: '#6f42c1' },
+        lugol: { name: "ルゴール媒染", time: 60, color: '#2e1a47' },
+        pa: { name: "ピクリン酸アルコール", time: 20, color: '#f1f508' },
+        alc: { name: "アルコール脱色", time: 20, color: '#fff' },
+        counter: { name: "後染色", time: 30 },
+        dry: { name: "乾燥", time: 60 },
+        wash: { name: "水洗", time: 5 }
+    };
+
+    function init(m) {
+        mode = m;
+        document.getElementById('selector-screen').style.display = 'none';
+        document.getElementById('msg').innerText = `${mode === 'hucker' ? 'ハッカー' : 'フェイバー'}法を開始します。まずはクリスタル紫から。`;
+        
+        // 不要なボタンを非表示
+        if (mode === 'favor') {
+            document.getElementById('btn-lugol').style.display = 'none';
+            document.getElementById('btn-alc').style.display = 'none';
+            document.getElementById('btn-counter').innerText = "3. フクシン染色";
+            document.getElementById('btn-counter').style.background = 'var(--fuchsin-color)';
+        } else {
+            document.getElementById('btn-pa').style.display = 'none';
+            document.getElementById('btn-counter').innerText = "4. サフラニン染色";
+            document.getElementById('btn-counter').style.background = 'var(--safranin-color)';
+        }
+
+        const view = document.getElementById('view');
+        for (let i = 0; i < 40; i++) {
+            const b = document.createElement('div');
+            b.className = 'bacillus';
+            b.style.transform = `rotate(${Math.random() * 360}deg)`;
+            view.appendChild(b);
+        }
+    }
+
+    async function act(clicked) {
+        const expected = orders[mode][stepIdx];
+        if (clicked !== expected) {
+            score -= 10;
+            document.getElementById('score').innerText = score;
+            document.getElementById('msg').innerHTML = `<span style="color:red;">【手順ミス】次は ${config[expected] ? config[expected].name : '水洗'} が必要です。</span>`;
+            return;
+        }
+
+        const data = config[clicked];
+        if (data && data.time > 0) {
+            document.getElementById('msg').innerText = `${data.name}中...`;
+            await new Promise(r => {
+                let c = 0;
+                let itv = setInterval(() => {
+                    c++; document.getElementById('timer').innerText = c;
+                    if(c >= data.time) { clearInterval(itv); r(); }
+                }, 10);
+            });
+        }
+
+        updateVisuals(clicked);
+        stepIdx++;
+        if (clicked === 'obs') finish();
+        else document.getElementById('msg').innerText = `${getStepName(clicked)}完了。次へ。`;
+    }
+
+    function updateVisuals(c) {
+        const bacs = document.querySelectorAll('.bacillus');
+        const view = document.getElementById('view');
+        if (c === 'cv') {
+            view.style.background = 'rgba(111,66,193,0.1)';
+            bacs.forEach(b => b.style.background = 'var(--cv-color)');
+        } else if (c === 'wash') {
+            view.style.background = '#fff';
+        } else if (c === 'lugol') {
+            bacs.forEach(b => b.style.background = '#2e1a47');
+        } else if (c === 'pa') {
+            view.style.background = 'rgba(241, 245, 8, 0.2)';
+            bacs.forEach(b => {
+                if(isPositive) b.style.background = '#2e1a47'; // 媒染保護
+                else b.style.background = 'rgba(0,0,0,0.05)'; // 脱色
+            });
+        } else if (c === 'alc') {
+            bacs.forEach(b => { if(!isPositive) b.style.background = 'rgba(0,0,0,0.05)'; });
+        } else if (c === 'counter') {
+            const color = (mode === 'hucker') ? 'var(--safranin-color)' : 'var(--fuchsin-color)';
+            bacs.forEach(b => { if(!isPositive) b.style.background = color; });
+        } else if (c === 'dry') {
+            view.style.filter = "grayscale(0.3) contrast(1.2)";
+        }
+    }
+
+    function getStepName(s) {
+        if(s === 'wash') return "水洗";
+        return config[s].name;
+    }
+
+    function finish() {
+        const screen = document.getElementById('result-screen');
+        screen.style.display = 'flex';
+        document.getElementById('res-score').innerText = score + " 点";
+        const type = isPositive ? "GPR (グラム陽性桿菌)" : "GNR (グラム陰性桿菌)";
+        document.getElementById('res-type').innerText = type;
+        
+        let comm = mode === 'hucker' 
+            ? "【ハッカー法解説】ルゴールで色素を固定し、アルコールで脱色する標準的な手法です。" 
+            : "【フェイバー法解説】ピクリン酸アルコールにより媒染（陽性菌保護）と脱色（陰性菌）を同時に行いました。";
+        
+        document.getElementById('res-comm').innerText = comm + (score === 100 ? "\n\n手順は完璧です！" : "\n\n手順に誤りがありました。復習しましょう。");
+    }
+</script>
+</body>
+</html>
