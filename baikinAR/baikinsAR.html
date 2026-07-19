@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>バイキンズ AR スカウター | 細菌楽</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+JP:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#05080c;
+    --panel:rgba(7,12,18,0.88);
+    --panel-edge:rgba(160,200,210,0.14);
+    --hud:#22d3ee;           /* 既定HUDカラー（非定型・細胞内寄生） */
+    --gram-pos:#9b6bff;      /* クリスタルバイオレット染色 = グラム陽性 */
+    --gram-neg:#ff4d6a;      /* サフラニン対比染色 = グラム陰性 */
+    --afb:#ff9640;           /* チール・ネルゼン染色（石炭酸フクシン）= 抗酸菌 */
+    --fungi:#f6c445;         /* 真核生物・キチン質細胞壁 = 真菌 */
+    --text-hi:#eaf6fa;
+    --text-dim:#7f95a0;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;padding:0;width:100%;height:100%;overflow:hidden;
+    background:var(--void);
+    font-family:'Noto Sans JP',sans-serif;
+    color:var(--text-hi);
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  #video{
+    position:absolute;inset:0;width:100%;height:100%;
+    object-fit:cover;z-index:1;filter:saturate(0.92) contrast(1.04) brightness(0.96);
+  }
+  /* 画面全体に薄く乗る走査グリッド。カメラ映像を邪魔しない濃度に抑える */
+  #grid-overlay{
+    position:absolute;inset:0;z-index:2;pointer-events:none;
+    background-image:
+      linear-gradient(rgba(34,211,238,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34,211,238,0.05) 1px, transparent 1px);
+    background-size:38px 38px;
+    mix-blend-mode:screen;
+    opacity:0.5;
+  }
+  /* 走査ライン（スキャンスイープ） */
+  #scanline{
+    position:absolute;left:0;width:100%;height:120px;z-index:3;pointer-events:none;
+    background:linear-gradient(to bottom, rgba(34,211,238,0) 0%, rgba(34,211,238,0.10) 45%, rgba(34,211,238,0.22) 50%, rgba(34,211,238,0.10) 55%, rgba(34,211,238,0) 100%);
+    animation:sweep 7s linear infinite;
+    mix-blend-mode:screen;
+  }
+  @keyframes sweep{
+    0%{transform:translateY(-140px);}
+    100%{transform:translateY(100vh);}
+  }
+
+  /* 四隅のコーナーブラケット（ターゲティング枠） */
+  .corner{position:absolute;width:26px;height:26px;z-index:4;pointer-events:none;opacity:.75;}
+  .corner::before,.corner::after{content:"";position:absolute;background:var(--hud);box-shadow:0 0 6px rgba(34,211,238,.7);}
+  .c-tl{top:calc(10px + env(safe-area-inset-top));left:10px;}
+  .c-tl::before{top:0;left:0;width:100%;height:2px;}
+  .c-tl::after{top:0;left:0;width:2px;height:100%;}
+  .c-tr{top:calc(10px + env(safe-area-inset-top));right:10px;}
+  .c-tr::before{top:0;right:0;width:100%;height:2px;}
+  .c-tr::after{top:0;right:0;width:2px;height:100%;}
+  .c-bl{bottom:calc(38px + env(safe-area-inset-bottom));left:10px;}
+  .c-bl::before{bottom:0;left:0;width:100%;height:2px;}
+  .c-bl::after{bottom:0;left:0;width:2px;height:100%;}
+  .c-br{bottom:calc(38px + env(safe-area-inset-bottom));right:10px;}
+  .c-br::before{bottom:0;right:0;width:100%;height:2px;}
+  .c-br::after{bottom:0;right:0;width:2px;height:100%;}
+
+  /* 上部HUDバー */
+  #hud-top{
+    position:absolute;top:0;left:0;width:100%;z-index:5;
+    padding:calc(10px + env(safe-area-inset-top)) 16px 8px;
+    display:flex;justify-content:space-between;align-items:flex-start;
+    pointer-events:none;
+  }
+  #hud-title .eyebrow{
+    font-size:9px;letter-spacing:.18em;color:var(--hud);opacity:.85;
+  }
+  #hud-title .title{
+    font-size:15px;font-weight:900;letter-spacing:.03em;
+    text-shadow:0 0 10px rgba(34,211,238,.5);
+  }
+  #hud-readout{
+    text-align:right;font-size:10px;color:var(--text-dim);line-height:1.5;
+  }
+  #hud-readout .status{
+    color:var(--hud);font-weight:700;
+  }
+  #hud-readout .status.locked{color:var(--fungi);}
+
+  /* 凡例トグル */
+  #legend-btn{
+    position:absolute;z-index:6;
+    top:calc(52px + env(safe-area-inset-top));right:12px;
+    width:30px;height:30px;border-radius:50%;
+    background:var(--panel);border:1px solid var(--panel-edge);
+    color:var(--hud);font-size:13px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    pointer-events:auto;
+  }
+  #legend-modal{
+    position:absolute;inset:0;z-index:20;display:none;
+    background:rgba(2,5,8,0.72);backdrop-filter:blur(2px);
+    align-items:center;justify-content:center;padding:24px;
+  }
+  #legend-modal.open{display:flex;}
+  #legend-card{
+    width:100%;max-width:340px;background:var(--panel);
+    border:1px solid var(--panel-edge);border-radius:14px;padding:18px;
+  }
+  #legend-card h2{
+    margin:0 0 4px;font-size:14px;letter-spacing:.05em;
+  }
+  #legend-card .sub{font-size:10px;color:var(--text-dim);margin-bottom:14px;}
+  .legend-row{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-top:1px solid rgba(255,255,255,0.06);}
+  .legend-row:first-of-type{border-top:none;}
+  .legend-dot{width:11px;height:11px;border-radius:3px;margin-top:3px;flex:none;}
+  .legend-txt .code{font-size:10px;font-weight:700;}
+  .legend-txt .desc{font-size:10px;color:var(--text-dim);margin-top:1px;}
+  #legend-close{
+    margin-top:14px;width:100%;padding:9px;border-radius:8px;border:none;
+    background:var(--hud);color:#04222a;font-weight:700;font-size:12px;
+  }
+
+  /* AR要素コンテナ */
+  #ar-container{
+    position:absolute;top:calc(50% - 155px);left:50%;
+    width:100%;height:460px;transform:translateX(-50%);
+    z-index:4;pointer-events:none;
+  }
+  .chara-wrapper{
+    position:absolute;top:0;left:50%;width:270px;margin-left:-135px;
+    display:none;flex-direction:column;align-items:center;
+  }
+
+  .chara-header{
+    display:flex;flex-direction:column;align-items:center;margin-bottom:10px;
+    opacity:0;transform:translateY(-8px);
+    transition:opacity .2s ease,transform .2s ease;
+  }
+  .cat-badge{
+    font-size:9px;font-weight:700;letter-spacing:.1em;
+    padding:2px 8px;border-radius:10px;margin-bottom:5px;
+    background:rgba(0,0,0,0.5);border:1px solid var(--cat-color);
+    color:var(--cat-color);
+  }
+  .chara-name{
+    font-size:16px;font-weight:900;color:#fff;
+    background:rgba(4,8,12,0.88);padding:4px 14px;border-radius:10px;
+    border:1px solid var(--cat-color);text-align:center;white-space:nowrap;
+    box-shadow:0 0 12px color-mix(in srgb, var(--cat-color) 55%, transparent);
+  }
+  .chara-subnames{
+    font-size:10.5px;color:#c7d6db;background:rgba(4,8,12,0.78);
+    padding:3px 10px;border-radius:7px;margin-top:4px;text-align:center;line-height:1.45;
+  }
+  .chara-subnames .sci{font-style:normal;}
+  .chara-subnames i{font-style:italic;}
+
+  /* 六角フレーム（培養標本枠） */
+  .hex-outer{
+    width:150px;height:150px;
+    clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
+    background:var(--cat-color);padding:3px;
+    filter:drop-shadow(0 0 10px color-mix(in srgb, var(--cat-color) 60%, transparent));
+    transition:transform .2s ease;
+  }
+  .hex-inner{
+    width:100%;height:100%;
+    clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
+    background:#070b10;display:flex;align-items:center;justify-content:center;
+    position:relative;overflow:hidden;
+  }
+  .hex-inner::before{
+    content:"";position:absolute;inset:0;
+    background:
+      linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size:14px 14px;
+  }
+  .chara-img{width:76%;height:76%;object-fit:contain;position:relative;z-index:1;}
+
+  .chara-details{
+    margin-top:10px;width:100%;background:rgba(4,8,12,0.88);border-radius:11px;
+    border:1px solid var(--cat-color);padding:10px 11px;color:#eef6f8;
+    font-size:11.5px;line-height:1.5;
+    box-shadow:0 0 10px color-mix(in srgb, var(--cat-color) 40%, transparent);
+    opacity:0;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease;
+  }
+  .detail-item{margin-bottom:4px;}
+  .detail-item:last-child{margin-bottom:0;}
+  .detail-title{color:var(--cat-color);font-weight:700;margin-right:4px;}
+
+  .chara-wrapper.active .chara-header{opacity:1;transform:translateY(0);}
+  .chara-wrapper.active .hex-outer{transform:scale(1.08);}
+  .chara-wrapper.active .chara-details{opacity:1;transform:translateY(0);}
+
+  /* 起動ボタン */
+  #start-screen{
+    position:absolute;inset:0;z-index:10;display:flex;
+    flex-direction:column;align-items:center;justify-content:center;gap:18px;
+    background:radial-gradient(ellipse at center, #0c1620 0%, #05080c 70%);
+  }
+  #start-screen .eyebrow{font-size:10px;letter-spacing:.25em;color:var(--hud);}
+  #start-screen h1{
+    margin:0;font-size:22px;font-weight:900;text-align:center;letter-spacing:.02em;
+    text-shadow:0 0 16px rgba(34,211,238,.5);
+  }
+  #start-screen p{margin:0;font-size:11px;color:var(--text-dim);text-align:center;max-width:260px;line-height:1.6;}
+  #start-btn{
+    position:relative;width:130px;height:130px;
+    clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
+    background:linear-gradient(160deg,#0e2530,#0a1820);
+    border:2px solid var(--hud);color:var(--hud);
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;
+    letter-spacing:.05em;cursor:pointer;
+  }
+  #start-btn .ring{
+    position:absolute;inset:-14px;border:1px solid rgba(34,211,238,.35);
+    clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
+    animation:pulse-ring 2.4s ease-out infinite;pointer-events:none;
+  }
+  @keyframes pulse-ring{
+    0%{transform:scale(0.94);opacity:.9;}
+    100%{transform:scale(1.28);opacity:0;}
+  }
+
+  /* フッター注記 */
+  #footer-note{
+    position:absolute;left:0;bottom:0;width:100%;z-index:8;
+    padding:5px 14px calc(5px + env(safe-area-inset-bottom));
+    background:rgba(2,5,8,0.65);
+    font-size:8.5px;line-height:1.5;color:#93a7af;text-align:center;
+    pointer-events:auto;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    #scanline{animation:none;opacity:.08;}
+    #start-btn .ring{animation:none;opacity:.25;}
+  }
+</style>
+</head>
+<body>
+
+<video id="video" autoplay playsinline muted></video>
+<div id="grid-overlay"></div>
+<div id="scanline"></div>
+
+<div class="corner c-tl"></div>
+<div class="corner c-tr"></div>
+<div class="corner c-bl"></div>
+<div class="corner c-br"></div>
+
+<div id="hud-top">
+  <div id="hud-title">
+    <div class="eyebrow mono">SAIKINGAKU FIELD UNIT</div>
+    <div class="title">バイキンズ AR スカウター</div>
+  </div>
+  <div id="hud-readout" class="mono">
+    <div>HDG <span id="heading-val">---</span>°</div>
+    <div class="status" id="scan-status">STANDBY</div>
+  </div>
+</div>
+
+<button id="legend-btn" aria-label="染色カラーの凡例">凡</button>
+<div id="legend-modal">
+  <div id="legend-card">
+    <h2>カラーコード凡例</h2>
+    <div class="sub mono">染色性・分類に基づく識別カラー</div>
+    <div id="legend-list"></div>
+    <button id="legend-close">閉じる</button>
+  </div>
+</div>
+
+<div id="ar-container"></div>
+
+<div id="start-screen">
+  <div class="eyebrow mono">SYSTEM OFFLINE</div>
+  <h1>細菌・真菌<br>フィールドスキャナー</h1>
+  <p>カメラと方位センサーへのアクセスを許可し、周囲にかざして32種の病原体を探査します。</p>
+  <button id="start-btn">
+    <span class="ring"></span>
+    起動<br>INITIALIZE
+  </button>
+</div>
+
+<div id="footer-note">
+  本テキストは AI（Claude, Anthropic）を用いて作成されました。内容には誤りが含まれる可能性があります。医療上の判断には必ず公式の教科書・文献・専門家の指導を参照してください。<br>
+  二次利用・再配布は自己責任のもとで可能です。その際、本注記の保持を推奨します。
+</div>
+
+<script>
+  const video = document.getElementById('video');
+  const startScreen = document.getElementById('start-screen');
+  const startBtn = document.getElementById('start-btn');
+  const arContainer = document.getElementById('ar-container');
+  const headingVal = document.getElementById('heading-val');
+  const scanStatus = document.getElementById('scan-status');
+  const legendBtn = document.getElementById('legend-btn');
+  const legendModal = document.getElementById('legend-modal');
+  const legendClose = document.getElementById('legend-close');
+  const legendList = document.getElementById('legend-list');
+
+  const fov = 60;
+  const screenWidth = window.innerWidth;
+  const charas = [];
+
+  // 染色・分類に基づくカラーコード定義
+  const CATS = {
+    gram_pos: { code:'GRAM (+)', label:'グラム陽性', color:'var(--gram-pos)', desc:'クリスタルバイオレットで染色（紫）。細胞壁が厚い。' },
+    gram_neg: { code:'GRAM (–)', label:'グラム陰性', color:'var(--gram-neg)', desc:'サフラニンで対比染色（赤）。外膜を持つ。' },
+    afb:      { code:'ACID-FAST', label:'抗酸菌', color:'var(--afb)', desc:'チール・ネルゼン染色で赤〜橙。ミコール酸を含む細胞壁。' },
+    atypical: { code:'ATYPICAL', label:'非定型・細胞内寄生', color:'var(--hud)', desc:'通常のグラム染色では検出しにくい。' },
+    fungi:    { code:'FUNGI', label:'真菌', color:'var(--fungi)', desc:'真核生物。キチン質の細胞壁を持つ。' }
+  };
+
+  function categoryOf(type){
+    if (type === 'グラム陽性球菌' || type === 'グラム陽性桿菌') return 'gram_pos';
+    if (type === 'グラム陰性桿菌') return 'gram_neg';
+    if (type === '抗酸菌') return 'afb';
+    if (type === '非定型菌' || type === '細胞内寄生菌') return 'atypical';
+    if (type === '真菌') return 'fungi';
+    return 'atypical';
+  }
+
+  // 学名のイタリック処理: 血清型（例: Salmonella Typhi の Typhi）や
+  // EHEC のような略称、"complex" は非イタリックとする
+  function renderSci(id, sci){
+    if (id === 6) return sci; // EHEC は学名ではなく略称
+    if (sci.indexOf(' complex') !== -1){
+      const base = sci.replace(' complex','');
+      return `<i>${base}</i> complex`;
+    }
+    const parts = sci.split(' ');
+    if (parts.length === 2 && /^[A-Z]/.test(parts[1])){
+      // 2語目が大文字始まり = 血清型（例: Typhi）と判断し非イタリック
+      return `<i>${parts[0]}</i> ${parts[1]}`;
+    }
+    return `<i>${sci}</i>`;
+  }
+
+  // データリスト
+  const dataset = [
+    { id: 1, name: "ハイエンキューキン王", ja: "肺炎球菌", sci: "Streptococcus pneumoniae", type: "グラム陽性球菌", feature: "肺炎の原因菌として最多。尿中抗原が診断に有用。ワクチンあり。" },
+    { id: 2, name: "インフルエンザキンXV世女王", ja: "インフルエンザ菌", sci: "Haemophilus influenzae", type: "グラム陰性桿菌", feature: "市中肺炎の原因菌として2番目に多い。小型で多形性を示す。" },
+    { id: 3, name: "マイコプラズマ姫", ja: "肺炎マイコプラズマ", sci: "Mycoplasma pneumoniae", type: "非定型菌", feature: "細胞壁を持たずβ-ラクタム系薬が無効。頑固な咳が特徴。" },
+    { id: 4, name: "レジオネラ爺や", ja: "レジオネラ", sci: "Legionella pneumophila", type: "非定型菌", feature: "淡水環境に生息し好気性。エアロゾル感染による集団発生が有名。" },
+    { id: 5, name: "ダイチョーキン", ja: "大腸菌", sci: "Escherichia coli", type: "グラム陰性桿菌", feature: "血液、尿での分離率No.1。尿路感染症や敗血症の原因となる。" },
+    { id: 6, name: "ベロダシ", ja: "腸管出血性大腸菌", sci: "EHEC", type: "グラム陰性桿菌", feature: "志賀毒素（ベロ毒素）を産生。重症例では溶血性尿毒症症候群（HUS）を起こす。" },
+    { id: 7, name: "シゲ裸族", ja: "赤痢菌", sci: "Shigella dysenteriae", type: "グラム陰性桿菌", feature: "少量の菌でも感染成立する強い病原性。激しい腹痛や血性下痢。" },
+    { id: 8, name: "クレブシエ裸族", ja: "肺炎桿菌", sci: "Klebsiella pneumoniae", type: "グラム陰性桿菌", feature: "厚い莢膜を持つ腸内細菌科の代表。高病原性・高粘稠性株が問題。" },
+    { id: 9, name: "ビブリ男コレラ", ja: "コレラ菌", sci: "Vibrio cholerae", type: "グラム陰性桿菌", feature: "コレラ毒素を産生。脱水症状が顕著な重度の水様性下痢を引き起こす。" },
+    { id: 10, name: "リョクノーキン", ja: "緑膿菌", sci: "Pseudomonas aeruginosa", type: "グラム陰性桿菌", feature: "好気性で多剤耐性を示す場合が多い。医療関連感染で非常に重要。" },
+    { id: 11, name: "アシネトバクター", ja: "アシネトバクター", sci: "Acinetobacter baumannii", type: "グラム陰性桿菌", feature: "環境中に広く存在。多剤耐性化が進んでおり治療が困難な場合がある。" },
+    { id: 12, name: "チフス和尚", ja: "腸チフス菌", sci: "Salmonella Typhi", type: "グラム陰性桿菌", feature: "マクロファージに運ばれリンパ節や血液、胆嚢内へ。高熱や消化管症状。" },
+    { id: 13, name: "クラミジア・ニューモニエ侯", ja: "肺炎クラミジア", sci: "Chlamydia pneumoniae", type: "細胞内寄生菌", feature: "偏性細胞内増殖性。ATPを自分で作れない。気管支炎や肺炎の原因。" },
+    { id: 14, name: "クラミジア・シッタ氏", ja: "オウム病クラミジア", sci: "Chlamydia psittaci", type: "細胞内寄生菌", feature: "鳥類からヒトに伝播しオウム病を起こす。鳥類との接触がリスク。" },
+    { id: 15, name: "ブドーキューキン族", ja: "黄色ブドウ球菌", sci: "Staphylococcus aureus", type: "グラム陽性球菌", feature: "コアグラーゼ陽性。耐性菌（MRSA）や毒素性ショック（TSS）が問題。" },
+    { id: 16, name: "ケッカクキン", ja: "結核菌", sci: "Mycobacterium tuberculosis", type: "抗酸菌", feature: "細胞壁にミコール酸を含む。空気感染し、慢性咳嗽や体重減少を起こす。" },
+    { id: 17, name: "MAC", ja: "非結核性抗酸菌", sci: "M. avium complex", type: "抗酸菌", feature: "自然環境に広く存在。結核菌に似るがヒトからヒトへの感染はない。" },
+    { id: 18, name: "コクシジオイデス海賊王", ja: "コクシジオイデス", sci: "Coccidioides immitis", type: "真菌", feature: "乾燥地域の土壌に生息し、胞子を吸入して感染。コクシジオイデス症。" },
+    { id: 19, name: "ヒストプラズ魔王", ja: "ヒストプラズマ", sci: "Histoplasma capsulatum", type: "真菌", feature: "土壌や鳥の糞に存在。胞子を吸入して肺や全身に感染。免疫不全で重症化。" },
+    { id: 20, name: "パラコクシジオイデス", ja: "パラコクシジオイデス", sci: "P. brasiliensis", type: "真菌", feature: "南米の土壌に存在。顕微鏡下で舵輪状に見える。慢性肉芽腫性疾患。" },
+    { id: 21, name: "ミセス・ブラスト", ja: "ブラストミセス", sci: "Blastomyces dermatitidis", type: "真菌", feature: "北米で主に発生。環境中の胞子を吸入し、皮膚や肺に感染する。" },
+    { id: 22, name: "タラロマイセス・マルネッフェイ", ja: "タラロマイセス", sci: "Talaromyces marneffei", type: "真菌", feature: "熱帯地域に多い二形性真菌。HIV患者などの免疫低下者で特に重症化。" },
+    { id: 23, name: "クリプトコックス・ネオフォルマンス", ja: "クリプトコックス", sci: "Cryptococcus neoformans", type: "真菌", feature: "ハトの糞などに存在。莢膜を持つ真菌で、重症の髄膜炎を引き起こす。" },
+    { id: 24, name: "クリプトコックス・ガッティ", ja: "クリプトコックス・ガッティ", sci: "Cryptococcus gattii", type: "真菌", feature: "コアラやユーカリに関連。熱帯に多く、健常者でも感染・発症する。" },
+    { id: 25, name: "カンジダ", ja: "カンジダ・アルビカンス", sci: "Candida albicans", type: "真菌", feature: "常在真菌だが、日和見感染として口腔カンジダ症やカンジダ血症を起こす。" },
+    { id: 26, name: "アスペルギルス", ja: "アスペルギルス・フミガツス", sci: "Aspergillus fumigatus", type: "真菌", feature: "空気中の胞子を吸入して感染。アレルギー性や侵襲性の肺疾患を誘発。" },
+    { id: 27, name: "コーボくん", ja: "酵母菌", sci: "Saccharomyces cerevisiae", type: "真菌", feature: "ビールやパン作りの達人。エタノール発酵を行う。通常は非病原性。" },
+    { id: 28, name: "こうじ君", ja: "麹菌", sci: "Aspergillus oryzae", type: "真菌", feature: "日本酒や味噌・醤油作りの名手。デンプン分解酵素を多く生産。非病原性。" },
+    { id: 29, name: "A軍連隊", ja: "A群溶血性レンサ球菌", sci: "Streptococcus pyogenes", type: "グラム陽性球菌", feature: "β溶血性。咽頭炎、猩紅熱のほか、劇症型レンサ球菌感染症の原因にも。" },
+    { id: 30, name: "B軍連隊", ja: "B群溶血性レンサ球菌", sci: "Streptococcus agalactiae", type: "グラム陽性球菌", feature: "新生児髄膜炎の原因菌として最重要。妊婦スクリーニングと予防が有効。" },
+    { id: 31, name: "ディフィシル", ja: "ディフィシル菌", sci: "Clostridioides difficile", type: "グラム陽性桿菌", feature: "芽胞を形成する嫌気性菌。抗菌薬関連の偽膜性大腸炎や激しい下痢を起こす。" },
+    { id: 32, name: "タンソ", ja: "炭疽菌", sci: "Bacillus anthracis", type: "グラム陽性桿菌", feature: "芽胞を形成し環境中で長期間生存。バイオテロのリスクがある規制対象菌。" }
+  ];
+
+  // 凡例リスト生成
+  Object.values(CATS).forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'legend-row';
+    row.innerHTML = `
+      <div class="legend-dot" style="background:${c.color}"></div>
+      <div class="legend-txt">
+        <div class="code mono" style="color:${c.color}">${c.code} ／ ${c.label}</div>
+        <div class="desc">${c.desc}</div>
+      </div>`;
+    legendList.appendChild(row);
+  });
+  legendBtn.addEventListener('click', () => legendModal.classList.add('open'));
+  legendClose.addEventListener('click', () => legendModal.classList.remove('open'));
+  legendModal.addEventListener('click', (e) => { if (e.target === legendModal) legendModal.classList.remove('open'); });
+
+  // HTML要素の自動生成
+  dataset.forEach((data, index) => {
+    const catKey = categoryOf(data.type);
+    const cat = CATS[catKey];
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chara-wrapper';
+    wrapper.style.setProperty('--cat-color', cat.color);
+
+    const header = document.createElement('div');
+    header.className = 'chara-header';
+
+    const badge = document.createElement('div');
+    badge.className = 'cat-badge';
+    badge.innerText = cat.code;
+
+    const nameTag = document.createElement('div');
+    nameTag.className = 'chara-name';
+    nameTag.innerText = data.name;
+
+    const subNames = document.createElement('div');
+    subNames.className = 'chara-subnames';
+    subNames.innerHTML = `和名: ${data.ja}<br>学名: <span class="sci">${renderSci(data.id, data.sci)}</span>`;
+
+    header.appendChild(badge);
+    header.appendChild(nameTag);
+    header.appendChild(subNames);
+
+    const hexOuter = document.createElement('div');
+    hexOuter.className = 'hex-outer';
+    const hexInner = document.createElement('div');
+    hexInner.className = 'hex-inner';
+    const img = document.createElement('img');
+    img.src = `https://somekata.github.io/baikinscharacters/img/chara${data.id}.png`;
+    img.className = 'chara-img';
+    img.alt = data.name;
+    hexInner.appendChild(img);
+    hexOuter.appendChild(hexInner);
+
+    const details = document.createElement('div');
+    details.className = 'chara-details';
+    details.innerHTML = `
+      <div class="detail-item"><span class="detail-title">[分類]</span>${data.type}</div>
+      <div class="detail-item"><span class="detail-title">[特徴]</span>${data.feature}</div>
+    `;
+
+    wrapper.appendChild(header);
+    wrapper.appendChild(hexOuter);
+    wrapper.appendChild(details);
+    arContainer.appendChild(wrapper);
+
+    const assignedAngle = (360 / dataset.length) * index;
+    charas.push({ el: wrapper, angle: assignedAngle, name: data.name });
+  });
+
+  // センサー・カメラ起動処理
+  startBtn.addEventListener('click', async () => {
+    startScreen.style.display = 'none';
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = stream;
+    } catch (err) { alert("カメラ起動失敗: " + err.message); }
+
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        const permissionState = await DeviceOrientationEvent.requestPermission();
+        if (permissionState === 'granted') { window.addEventListener('deviceorientation', handleOrientation, true); }
+      } catch (err) { alert('エラー: ' + err.message); }
+    } else {
+      window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+  });
+
+  // 向きの同期とロックオン判定
+  function handleOrientation(event) {
+    let heading = event.webkitCompassHeading || (360 - event.alpha);
+    if (heading === undefined) return;
+
+    headingVal.innerText = String(Math.round(heading)).padStart(3, '0');
+
+    let lockedName = null;
+
+    charas.forEach(chara => {
+      let diff = chara.angle - heading;
+      while (diff < -180) diff += 360;
+      while (diff > 180) diff -= 360;
+
+      if (Math.abs(diff) < fov / 2) {
+        const xPosition = (diff / (fov / 2)) * (screenWidth / 2);
+        chara.el.style.display = 'flex';
+        chara.el.style.transform = `translateX(${xPosition}px)`;
+
+        if (Math.abs(diff) < 6) {
+          chara.el.classList.add('active');
+          lockedName = chara.name;
+        } else {
+          chara.el.classList.remove('active');
+        }
+
+        const baseOpacity = 1 - (Math.abs(diff) / (fov / 2));
+        chara.el.style.opacity = Math.max(baseOpacity, 0.2);
+      } else {
+        chara.el.style.display = 'none';
+        chara.el.classList.remove('active');
+      }
+    });
+
+    if (lockedName) {
+      scanStatus.innerText = `LOCKED: ${lockedName}`;
+      scanStatus.classList.add('locked');
+    } else {
+      scanStatus.innerText = 'SCANNING…';
+      scanStatus.classList.remove('locked');
+    }
+  }
+</script>
+</body>
+</html>
