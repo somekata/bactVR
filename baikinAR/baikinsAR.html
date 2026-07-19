@@ -454,20 +454,25 @@
   // センサー・カメラ起動処理
   startBtn.addEventListener('click', async () => {
     startScreen.style.display = 'none';
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      video.srcObject = stream;
-    } catch (err) { alert("カメラ起動失敗: " + err.message); }
 
+    // 方位センサーの許可要求は、タップ操作からできるだけ間を置かず
+    // 最初の非同期処理として呼ぶ(iOSはユーザー操作の直後でないと拒否するため)
     if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
       try {
         const permissionState = await DeviceOrientationEvent.requestPermission();
         if (permissionState === 'granted') { window.addEventListener('deviceorientation', handleOrientation, true); }
-      } catch (err) { alert('エラー: ' + err.message); }
+        else { alert('方位センサーの利用が許可されませんでした。設定から許可すると菌の方向が表示されます。'); }
+      } catch (err) { alert('方位センサーエラー: ' + err.message); }
     } else {
       window.addEventListener('deviceorientationabsolute', handleOrientation, true);
       window.addEventListener('deviceorientation', handleOrientation, true);
     }
+
+    // カメラの許可要求はその後で行う
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = stream;
+    } catch (err) { alert("カメラ起動失敗: " + err.message); }
   });
 
   // 向きの同期とロックオン判定
