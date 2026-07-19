@@ -136,6 +136,10 @@
   .chara-wrapper{
     position:absolute;top:0;left:50%;width:270px;margin-left:-135px;
     display:none;flex-direction:column;align-items:center;
+    z-index:1;transition:opacity .2s ease;
+  }
+  .chara-wrapper.active{
+    z-index:50;
   }
 
   .chara-header{
@@ -497,12 +501,13 @@
         if (Math.abs(diff) < 6) {
           chara.el.classList.add('active');
           lockedName = chara.name;
+          chara.el.style.opacity = 1;
         } else {
           chara.el.classList.remove('active');
+          // 中心から外れたキャラはより淡く表示し、中心のキャラを見やすくする
+          const baseOpacity = 1 - (Math.abs(diff) / (fov / 2));
+          chara.el.style.opacity = Math.max(baseOpacity * 0.45, 0.08);
         }
-
-        const baseOpacity = 1 - (Math.abs(diff) / (fov / 2));
-        chara.el.style.opacity = Math.max(baseOpacity, 0.2);
       } else {
         chara.el.style.display = 'none';
         chara.el.classList.remove('active');
