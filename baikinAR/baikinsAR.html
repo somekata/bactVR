@@ -10,22 +10,23 @@
 <style>
   :root{
     --void:#05080c;
-    --panel:rgba(7,12,18,0.88);
+    --panel:rgba(7,12,18,0.92);
     --panel-edge:rgba(160,200,210,0.14);
-    --hud:#22d3ee;           /* 既定HUDカラー（非定型・細胞内寄生） */
-    --gram-pos:#9b6bff;      /* クリスタルバイオレット染色 = グラム陽性 */
-    --gram-neg:#ff4d6a;      /* サフラニン対比染色 = グラム陰性 */
-    --afb:#ff9640;           /* チール・ネルゼン染色（石炭酸フクシン）= 抗酸菌 */
-    --fungi:#f6c445;         /* 真核生物・キチン質細胞壁 = 真菌 */
+    --hud:#22d3ee;
+    --gram-pos:#9b6bff;
+    --gram-neg:#ff4d6a;
+    --afb:#ff9640;
+    --fungi:#f6c445;
     --text-hi:#eaf6fa;
     --text-dim:#7f95a0;
   }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
   html,body{
     margin:0;padding:0;width:100%;height:100%;overflow:hidden;
     background:var(--void);
     font-family:'Noto Sans JP',sans-serif;
     color:var(--text-hi);
+    touch-action:none;
   }
   .mono{font-family:'JetBrains Mono',monospace;}
 
@@ -33,30 +34,25 @@
     position:absolute;inset:0;width:100%;height:100%;
     object-fit:cover;z-index:1;filter:saturate(0.92) contrast(1.04) brightness(0.96);
   }
-  /* 画面全体に薄く乗る走査グリッド。カメラ映像を邪魔しない濃度に抑える */
   #grid-overlay{
     position:absolute;inset:0;z-index:2;pointer-events:none;
     background-image:
       linear-gradient(rgba(34,211,238,0.05) 1px, transparent 1px),
       linear-gradient(90deg, rgba(34,211,238,0.05) 1px, transparent 1px);
     background-size:38px 38px;
-    mix-blend-mode:screen;
-    opacity:0.5;
+    mix-blend-mode:screen;opacity:0.5;
   }
-  /* 走査ライン（スキャンスイープ） */
   #scanline{
     position:absolute;left:0;width:100%;height:120px;z-index:3;pointer-events:none;
     background:linear-gradient(to bottom, rgba(34,211,238,0) 0%, rgba(34,211,238,0.10) 45%, rgba(34,211,238,0.22) 50%, rgba(34,211,238,0.10) 55%, rgba(34,211,238,0) 100%);
-    animation:sweep 7s linear infinite;
-    mix-blend-mode:screen;
+    animation:sweep 7s linear infinite;mix-blend-mode:screen;
   }
-  @keyframes sweep{
-    0%{transform:translateY(-140px);}
-    100%{transform:translateY(100vh);}
-  }
+  @keyframes sweep{0%{transform:translateY(-140px);}100%{transform:translateY(100vh);}}
 
-  /* 四隅のコーナーブラケット（ターゲティング枠） */
-  .corner{position:absolute;width:26px;height:26px;z-index:4;pointer-events:none;opacity:.75;}
+  /* ドラッグ操作用の透明レイヤー(カメラ映像より上・キャラより下) */
+  #drag-layer{position:absolute;inset:0;z-index:3;pointer-events:auto;}
+
+  .corner{position:absolute;width:26px;height:26px;z-index:6;pointer-events:none;opacity:.75;}
   .corner::before,.corner::after{content:"";position:absolute;background:var(--hud);box-shadow:0 0 6px rgba(34,211,238,.7);}
   .c-tl{top:calc(10px + env(safe-area-inset-top));left:10px;}
   .c-tl::before{top:0;left:0;width:100%;height:2px;}
@@ -71,177 +67,116 @@
   .c-br::before{bottom:0;right:0;width:100%;height:2px;}
   .c-br::after{bottom:0;right:0;width:2px;height:100%;}
 
-  /* 上部HUDバー */
   #hud-top{
-    position:absolute;top:0;left:0;width:100%;z-index:5;
+    position:absolute;top:0;left:0;width:100%;z-index:7;
     padding:calc(10px + env(safe-area-inset-top)) 16px 8px;
     display:flex;justify-content:space-between;align-items:flex-start;
     pointer-events:none;
   }
-  #hud-title .eyebrow{
-    font-size:9px;letter-spacing:.18em;color:var(--hud);opacity:.85;
-  }
-  #hud-title .title{
-    font-size:15px;font-weight:900;letter-spacing:.03em;
-    text-shadow:0 0 10px rgba(34,211,238,.5);
-  }
-  #hud-readout{
-    text-align:right;font-size:10px;color:var(--text-dim);line-height:1.5;
-  }
-  #hud-readout .status{
-    color:var(--hud);font-weight:700;
-  }
+  #hud-title .eyebrow{font-size:9px;letter-spacing:.18em;color:var(--hud);opacity:.85;}
+  #hud-title .title{font-size:15px;font-weight:900;letter-spacing:.03em;text-shadow:0 0 10px rgba(34,211,238,.5);}
+  #hud-readout{text-align:right;font-size:10px;color:var(--text-dim);line-height:1.5;}
+  #hud-readout .status{color:var(--hud);font-weight:700;}
   #hud-readout .status.locked{color:var(--fungi);}
 
-  /* 凡例トグル */
-  #legend-btn{
-    position:absolute;z-index:6;
-    top:calc(52px + env(safe-area-inset-top));right:12px;
-    width:30px;height:30px;border-radius:50%;
-    background:var(--panel);border:1px solid var(--panel-edge);
-    color:var(--hud);font-size:13px;font-weight:700;
-    display:flex;align-items:center;justify-content:center;
-    pointer-events:auto;
+  /* 右側ボタン列 (凡例 / 図鑑) */
+  #btn-stack{position:absolute;z-index:9;top:calc(52px + env(safe-area-inset-top));right:12px;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}
+  .round-btn{
+    width:32px;height:32px;border-radius:50%;pointer-events:auto;
+    background:var(--panel);border:1px solid var(--panel-edge);color:var(--hud);
+    font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;
+    line-height:1.1;text-align:center;
   }
-  #legend-modal{
-    position:absolute;inset:0;z-index:20;display:none;
+  #progress-badge{font-size:9px;color:var(--text-dim);pointer-events:none;}
+  .mono#progress-badge b{color:var(--fungi);}
+
+  #legend-modal,#detail-modal,#quiz-modal{
+    position:absolute;inset:0;z-index:22;display:none;
     background:rgba(2,5,8,0.72);backdrop-filter:blur(2px);
     align-items:center;justify-content:center;padding:24px;
   }
-  #legend-modal.open{display:flex;}
-  #legend-card{
-    width:100%;max-width:340px;background:var(--panel);
-    border:1px solid var(--panel-edge);border-radius:14px;padding:18px;
+  #legend-modal.open,#detail-modal.open,#quiz-modal.open{display:flex;}
+  .modal-card{
+    width:100%;max-width:340px;max-height:82vh;overflow-y:auto;
+    background:var(--panel);border:1px solid var(--panel-edge);border-radius:14px;padding:18px;
   }
-  #legend-card h2{
-    margin:0 0 4px;font-size:14px;letter-spacing:.05em;
-  }
-  #legend-card .sub{font-size:10px;color:var(--text-dim);margin-bottom:14px;}
+  .modal-card h2{margin:0 0 4px;font-size:14px;letter-spacing:.05em;}
+  .modal-card .sub{font-size:10px;color:var(--text-dim);margin-bottom:14px;}
   .legend-row{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-top:1px solid rgba(255,255,255,0.06);}
   .legend-row:first-of-type{border-top:none;}
   .legend-dot{width:11px;height:11px;border-radius:3px;margin-top:3px;flex:none;}
   .legend-txt .code{font-size:10px;font-weight:700;}
   .legend-txt .desc{font-size:10px;color:var(--text-dim);margin-top:1px;}
-  #legend-close{
-    margin-top:14px;width:100%;padding:9px;border-radius:8px;border:none;
-    background:var(--hud);color:#04222a;font-weight:700;font-size:12px;
-  }
+  .modal-close-btn{margin-top:14px;width:100%;padding:9px;border-radius:8px;border:none;background:var(--hud);color:#04222a;font-weight:700;font-size:12px;}
+
+  /* 詳細モーダル */
+  #detail-card .d-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.1em;padding:2px 8px;border-radius:10px;border:1px solid var(--d-color,var(--hud));color:var(--d-color,var(--hud));margin-bottom:8px;}
+  #detail-card .d-name{font-size:17px;font-weight:900;margin-bottom:2px;}
+  #detail-card .d-sub{font-size:11px;color:var(--text-dim);margin-bottom:12px;}
+  #detail-card .d-sub i{font-style:italic;}
+  #detail-card .d-feature{font-size:12.5px;line-height:1.7;background:rgba(255,255,255,0.04);border-radius:8px;padding:10px;border-left:3px solid var(--d-color,var(--hud));}
+  #detail-quiz-btn{margin-top:12px;width:100%;padding:9px;border-radius:8px;border:1px solid var(--hud);background:transparent;color:var(--hud);font-weight:700;font-size:12px;}
+
+  /* クイズモーダル */
+  #quiz-card .q-text{font-size:14px;font-weight:700;margin-bottom:14px;line-height:1.5;}
+  .q-choice{display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:8px;border-radius:8px;border:1px solid var(--panel-edge);background:rgba(255,255,255,0.03);color:var(--text-hi);font-size:12.5px;}
+  .q-choice.correct{border-color:#4ade80;background:rgba(74,222,128,0.15);color:#4ade80;}
+  .q-choice.wrong{border-color:var(--gram-neg);background:rgba(255,77,106,0.15);color:var(--gram-neg);}
+  #quiz-feedback{font-size:11px;color:var(--text-dim);margin-top:6px;min-height:14px;}
 
   /* AR要素コンテナ */
-  #ar-container{
-    position:absolute;top:calc(50% - 155px);left:50%;
-    width:100%;height:460px;transform:translateX(-50%);
-    z-index:4;pointer-events:none;
-  }
-  .chara-wrapper{
-    position:absolute;top:0;left:50%;width:270px;margin-left:-135px;
-    display:none;flex-direction:column;align-items:center;
-    z-index:1;transition:opacity .2s ease;
-  }
-  .chara-wrapper.active{
-    z-index:50;
-  }
+  #ar-container{position:absolute;top:calc(50% - 155px);left:50%;width:100%;height:460px;transform:translateX(-50%);z-index:4;pointer-events:none;}
+  .chara-wrapper{position:absolute;top:0;left:50%;width:270px;margin-left:-135px;display:none;flex-direction:column;align-items:center;z-index:1;transition:opacity .2s ease;}
+  .chara-wrapper.active{z-index:50;}
 
-  .chara-header{
-    display:flex;flex-direction:column;align-items:center;margin-bottom:10px;
-    opacity:0;transform:translateY(-8px);
-    transition:opacity .2s ease,transform .2s ease;
-  }
-  .cat-badge{
-    font-size:9px;font-weight:700;letter-spacing:.1em;
-    padding:2px 8px;border-radius:10px;margin-bottom:5px;
-    background:rgba(0,0,0,0.5);border:1px solid var(--cat-color);
-    color:var(--cat-color);
-  }
-  .chara-name{
-    font-size:16px;font-weight:900;color:#fff;
-    background:rgba(4,8,12,0.88);padding:4px 14px;border-radius:10px;
-    border:1px solid var(--cat-color);text-align:center;white-space:nowrap;
-    box-shadow:0 0 12px color-mix(in srgb, var(--cat-color) 55%, transparent);
-  }
-  .chara-subnames{
-    font-size:10.5px;color:#c7d6db;background:rgba(4,8,12,0.78);
-    padding:3px 10px;border-radius:7px;margin-top:4px;text-align:center;line-height:1.45;
-  }
-  .chara-subnames .sci{font-style:normal;}
+  .chara-header{display:flex;flex-direction:column;align-items:center;margin-bottom:10px;opacity:0;transform:translateY(-8px);transition:opacity .2s ease,transform .2s ease;}
+  .cat-badge{font-size:9px;font-weight:700;letter-spacing:.1em;padding:2px 8px;border-radius:10px;margin-bottom:5px;background:rgba(0,0,0,0.5);border:1px solid var(--cat-color);color:var(--cat-color);}
+  .chara-name{font-size:16px;font-weight:900;color:#fff;background:rgba(4,8,12,0.88);padding:4px 14px;border-radius:10px;border:1px solid var(--cat-color);text-align:center;white-space:nowrap;box-shadow:0 0 12px color-mix(in srgb, var(--cat-color) 55%, transparent);}
+  .chara-subnames{font-size:10.5px;color:#c7d6db;background:rgba(4,8,12,0.78);padding:3px 10px;border-radius:7px;margin-top:4px;text-align:center;line-height:1.45;}
   .chara-subnames i{font-style:italic;}
 
-  /* 六角フレーム（培養標本枠） */
-  .hex-outer{
-    width:150px;height:150px;
-    clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
-    background:var(--cat-color);padding:3px;
-    filter:drop-shadow(0 0 10px color-mix(in srgb, var(--cat-color) 60%, transparent));
-    transition:transform .2s ease;
-  }
-  .hex-inner{
-    width:100%;height:100%;
-    clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
-    background:#070b10;display:flex;align-items:center;justify-content:center;
-    position:relative;overflow:hidden;
-  }
-  .hex-inner::before{
-    content:"";position:absolute;inset:0;
-    background:
-      linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
-    background-size:14px 14px;
-  }
+  .hex-outer{width:150px;height:150px;clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);background:var(--cat-color);padding:3px;filter:drop-shadow(0 0 10px color-mix(in srgb, var(--cat-color) 60%, transparent));transition:transform .2s ease;pointer-events:auto;cursor:pointer;}
+  .hex-inner{width:100%;height:100%;clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);background:#070b10;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+  .hex-inner::before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);background-size:14px 14px;}
   .chara-img{width:76%;height:76%;object-fit:contain;position:relative;z-index:1;}
 
-  .chara-details{
-    margin-top:10px;width:100%;background:rgba(4,8,12,0.88);border-radius:11px;
-    border:1px solid var(--cat-color);padding:10px 11px;color:#eef6f8;
-    font-size:11.5px;line-height:1.5;
-    box-shadow:0 0 10px color-mix(in srgb, var(--cat-color) 40%, transparent);
-    opacity:0;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease;
-  }
+  .chara-details{margin-top:10px;width:100%;background:rgba(4,8,12,0.88);border-radius:11px;border:1px solid var(--cat-color);padding:10px 11px;color:#eef6f8;font-size:11.5px;line-height:1.5;box-shadow:0 0 10px color-mix(in srgb, var(--cat-color) 40%, transparent);opacity:0;transform:translateY(8px);transition:opacity .2s ease,transform .2s ease;pointer-events:auto;}
   .detail-item{margin-bottom:4px;}
   .detail-item:last-child{margin-bottom:0;}
   .detail-title{color:var(--cat-color);font-weight:700;margin-right:4px;}
+  .tap-hint{font-size:9px;color:var(--text-dim);margin-top:6px;text-align:center;}
 
   .chara-wrapper.active .chara-header{opacity:1;transform:translateY(0);}
   .chara-wrapper.active .hex-outer{transform:scale(1.08);}
   .chara-wrapper.active .chara-details{opacity:1;transform:translateY(0);}
 
-  /* 起動ボタン */
-  #start-screen{
-    position:absolute;inset:0;z-index:10;display:flex;
-    flex-direction:column;align-items:center;justify-content:center;gap:18px;
-    background:radial-gradient(ellipse at center, #0c1620 0%, #05080c 70%);
-  }
-  #start-screen .eyebrow{font-size:10px;letter-spacing:.25em;color:var(--hud);}
-  #start-screen h1{
-    margin:0;font-size:22px;font-weight:900;text-align:center;letter-spacing:.02em;
-    text-shadow:0 0 16px rgba(34,211,238,.5);
-  }
-  #start-screen p{margin:0;font-size:11px;color:var(--text-dim);text-align:center;max-width:260px;line-height:1.6;}
-  #start-btn{
-    position:relative;width:130px;height:130px;
-    clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
-    background:linear-gradient(160deg,#0e2530,#0a1820);
-    border:2px solid var(--hud);color:var(--hud);
-    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;
-    letter-spacing:.05em;cursor:pointer;
-  }
-  #start-btn .ring{
-    position:absolute;inset:-14px;border:1px solid rgba(34,211,238,.35);
-    clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);
-    animation:pulse-ring 2.4s ease-out infinite;pointer-events:none;
-  }
-  @keyframes pulse-ring{
-    0%{transform:scale(0.94);opacity:.9;}
-    100%{transform:scale(1.28);opacity:0;}
-  }
+  /* 図鑑グリッドビュー */
+  #grid-view{position:absolute;inset:0;z-index:15;display:none;flex-direction:column;background:rgba(3,6,10,0.97);}
+  #grid-view.open{display:flex;}
+  #grid-header{padding:calc(14px + env(safe-area-inset-top)) 16px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--panel-edge);}
+  #grid-header h2{margin:0;font-size:14px;}
+  #grid-header .sub{font-size:10px;color:var(--text-dim);}
+  #grid-close{background:none;border:1px solid var(--panel-edge);color:var(--text-hi);border-radius:8px;padding:6px 10px;font-size:11px;}
+  #grid-scroll{flex:1;overflow-y:auto;padding:14px 14px calc(14px + env(safe-area-inset-bottom));}
+  #grid-list{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .grid-cell{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
+  .grid-hex{width:100%;aspect-ratio:1;clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);background:var(--cell-color);padding:2px;position:relative;}
+  .grid-hex-inner{width:100%;height:100%;clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);background:#0a0f14;display:flex;align-items:center;justify-content:center;}
+  .grid-hex-inner img{width:82%;height:82%;object-fit:contain;}
+  .grid-cell.uncollected .grid-hex{filter:grayscale(1) brightness(0.35);}
+  .grid-cell.uncollected .grid-hex-inner img{opacity:0.5;}
+  .grid-cell-name{font-size:9px;margin-top:4px;text-align:center;color:var(--text-dim);}
+  .grid-cell:not(.uncollected) .grid-cell-name{color:var(--text-hi);}
 
-  /* フッター注記 */
-  #footer-note{
-    position:absolute;left:0;bottom:0;width:100%;z-index:8;
-    padding:5px 14px calc(5px + env(safe-area-inset-bottom));
-    background:rgba(2,5,8,0.65);
-    font-size:8.5px;line-height:1.5;color:#93a7af;text-align:center;
-    pointer-events:auto;
-  }
+  #start-screen{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(ellipse at center, #0c1620 0%, #05080c 70%);padding:20px;}
+  #start-screen .eyebrow{font-size:10px;letter-spacing:.25em;color:var(--hud);}
+  #start-screen h1{margin:0;font-size:22px;font-weight:900;text-align:center;letter-spacing:.02em;text-shadow:0 0 16px rgba(34,211,238,.5);}
+  #start-screen p{margin:0;font-size:11px;color:var(--text-dim);text-align:center;max-width:270px;line-height:1.7;}
+  #start-btn{position:relative;width:130px;height:130px;clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);background:linear-gradient(160deg,#0e2530,#0a1820);border:2px solid var(--hud);color:var(--hud);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;letter-spacing:.05em;cursor:pointer;}
+  #start-btn .ring{position:absolute;inset:-14px;border:1px solid rgba(34,211,238,.35);clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);animation:pulse-ring 2.4s ease-out infinite;pointer-events:none;}
+  @keyframes pulse-ring{0%{transform:scale(0.94);opacity:.9;}100%{transform:scale(1.28);opacity:0;}}
+
+  #footer-note{position:absolute;left:0;bottom:0;width:100%;z-index:8;padding:5px 14px calc(5px + env(safe-area-inset-bottom));background:rgba(2,5,8,0.65);font-size:8.5px;line-height:1.5;color:#93a7af;text-align:center;pointer-events:auto;}
 
   @media (prefers-reduced-motion: reduce){
     #scanline{animation:none;opacity:.08;}
@@ -254,6 +189,7 @@
 <video id="video" autoplay playsinline muted></video>
 <div id="grid-overlay"></div>
 <div id="scanline"></div>
+<div id="drag-layer"></div>
 
 <div class="corner c-tl"></div>
 <div class="corner c-tr"></div>
@@ -271,14 +207,10 @@
   </div>
 </div>
 
-<button id="legend-btn" aria-label="染色カラーの凡例">凡</button>
-<div id="legend-modal">
-  <div id="legend-card">
-    <h2>カラーコード凡例</h2>
-    <div class="sub mono">染色性・分類に基づく識別カラー</div>
-    <div id="legend-list"></div>
-    <button id="legend-close">閉じる</button>
-  </div>
+<div id="btn-stack">
+  <button class="round-btn" id="legend-btn" aria-label="染色カラーの凡例">凡</button>
+  <button class="round-btn" id="grid-btn" aria-label="図鑑を開く">図鑑</button>
+  <div id="progress-badge" class="mono"><b id="progress-count">0</b>/32</div>
 </div>
 
 <div id="ar-container"></div>
@@ -286,7 +218,7 @@
 <div id="start-screen">
   <div class="eyebrow mono">SYSTEM OFFLINE</div>
   <h1>細菌・真菌<br>フィールドスキャナー</h1>
-  <p>カメラと方位センサーへのアクセスを許可し、周囲にかざして32種の病原体を探査します。</p>
+  <p>カメラと方位センサーへのアクセスを許可すると始まります。指で画面を左右にドラッグしても視点を動かせます。菌をタップすると詳細とクイズに挑戦できます。</p>
   <button id="start-btn">
     <span class="ring"></span>
     起動<br>INITIALIZE
@@ -298,6 +230,38 @@
   二次利用・再配布は自己責任のもとで可能です。その際、本注記の保持を推奨します。
 </div>
 
+<div id="legend-modal">
+  <div class="modal-card" id="legend-card">
+    <h2>カラーコード凡例</h2>
+    <div class="sub mono">染色性・分類に基づく識別カラー</div>
+    <div id="legend-list"></div>
+    <button class="modal-close-btn" id="legend-close">閉じる</button>
+  </div>
+</div>
+
+<div id="detail-modal">
+  <div class="modal-card" id="detail-card">
+    <!-- JSで動的に生成 -->
+  </div>
+</div>
+
+<div id="quiz-modal">
+  <div class="modal-card" id="quiz-card">
+    <!-- JSで動的に生成 -->
+  </div>
+</div>
+
+<div id="grid-view">
+  <div id="grid-header">
+    <div>
+      <h2>バイキンズ図鑑</h2>
+      <div class="sub mono"><span id="grid-progress-text">0/32</span> 走査済み</div>
+    </div>
+    <button id="grid-close">閉じる</button>
+  </div>
+  <div id="grid-scroll"><div id="grid-list"></div></div>
+</div>
+
 <script>
   const video = document.getElementById('video');
   const startScreen = document.getElementById('start-screen');
@@ -305,14 +269,32 @@
   const arContainer = document.getElementById('ar-container');
   const headingVal = document.getElementById('heading-val');
   const scanStatus = document.getElementById('scan-status');
+  const dragLayer = document.getElementById('drag-layer');
+
   const legendBtn = document.getElementById('legend-btn');
   const legendModal = document.getElementById('legend-modal');
   const legendClose = document.getElementById('legend-close');
   const legendList = document.getElementById('legend-list');
 
+  const gridBtn = document.getElementById('grid-btn');
+  const gridView = document.getElementById('grid-view');
+  const gridClose = document.getElementById('grid-close');
+  const gridList = document.getElementById('grid-list');
+  const gridProgressText = document.getElementById('grid-progress-text');
+  const progressCount = document.getElementById('progress-count');
+
+  const detailModal = document.getElementById('detail-modal');
+  const detailCard = document.getElementById('detail-card');
+  const quizModal = document.getElementById('quiz-modal');
+  const quizCard = document.getElementById('quiz-card');
+
   const fov = 60;
   const screenWidth = window.innerWidth;
   const charas = [];
+
+  let deviceHeading = 0;      // センサーから得た方位
+  let manualOffset = 0;       // 指ドラッグによる補正
+  let hasOrientation = false;
 
   // 染色・分類に基づくカラーコード定義
   const CATS = {
@@ -332,8 +314,6 @@
     return 'atypical';
   }
 
-  // 学名のイタリック処理: 血清型（例: Salmonella Typhi の Typhi）や
-  // EHEC のような略称、"complex" は非イタリックとする
   function renderSci(id, sci){
     if (id === 6) return sci; // EHEC は学名ではなく略称
     if (sci.indexOf(' complex') !== -1){
@@ -342,13 +322,11 @@
     }
     const parts = sci.split(' ');
     if (parts.length === 2 && /^[A-Z]/.test(parts[1])){
-      // 2語目が大文字始まり = 血清型（例: Typhi）と判断し非イタリック
       return `<i>${parts[0]}</i> ${parts[1]}`;
     }
     return `<i>${sci}</i>`;
   }
 
-  // データリスト
   const dataset = [
     { id: 1, name: "ハイエンキューキン王", ja: "肺炎球菌", sci: "Streptococcus pneumoniae", type: "グラム陽性球菌", feature: "肺炎の原因菌として最多。尿中抗原が診断に有用。ワクチンあり。" },
     { id: 2, name: "インフルエンザキンXV世女王", ja: "インフルエンザ菌", sci: "Haemophilus influenzae", type: "グラム陰性桿菌", feature: "市中肺炎の原因菌として2番目に多い。小型で多形性を示す。" },
@@ -384,7 +362,29 @@
     { id: 32, name: "タンソ", ja: "炭疽菌", sci: "Bacillus anthracis", type: "グラム陽性桿菌", feature: "芽胞を形成し環境中で長期間生存。バイオテロのリスクがある規制対象菌。" }
   ];
 
-  // 凡例リスト生成
+  // ---------- 進捗(図鑑コンプリート)管理 ----------
+  let collected = new Set();
+  try { collected = new Set(JSON.parse(localStorage.getItem('baikins_collected') || '[]')); } catch(e){}
+  let quizStats = { correct: 0, total: 0 };
+  try { quizStats = JSON.parse(localStorage.getItem('baikins_quiz')) || quizStats; } catch(e){}
+
+  function saveCollected(){
+    try { localStorage.setItem('baikins_collected', JSON.stringify([...collected])); } catch(e){}
+  }
+  function updateProgressUI(){
+    progressCount.innerText = collected.size;
+    gridProgressText.innerText = `${collected.size}/32`;
+  }
+  function markCollected(id){
+    if (!collected.has(id)){
+      collected.add(id);
+      saveCollected();
+      updateProgressUI();
+      renderGrid();
+    }
+  }
+
+  // ---------- 凡例 ----------
   Object.values(CATS).forEach(c => {
     const row = document.createElement('div');
     row.className = 'legend-row';
@@ -400,7 +400,7 @@
   legendClose.addEventListener('click', () => legendModal.classList.remove('open'));
   legendModal.addEventListener('click', (e) => { if (e.target === legendModal) legendModal.classList.remove('open'); });
 
-  // HTML要素の自動生成
+  // ---------- AR要素の生成 ----------
   dataset.forEach((data, index) => {
     const catKey = categoryOf(data.type);
     const cat = CATS[catKey];
@@ -411,19 +411,15 @@
 
     const header = document.createElement('div');
     header.className = 'chara-header';
-
     const badge = document.createElement('div');
     badge.className = 'cat-badge';
     badge.innerText = cat.code;
-
     const nameTag = document.createElement('div');
     nameTag.className = 'chara-name';
     nameTag.innerText = data.name;
-
     const subNames = document.createElement('div');
     subNames.className = 'chara-subnames';
-    subNames.innerHTML = `和名: ${data.ja}<br>学名: <span class="sci">${renderSci(data.id, data.sci)}</span>`;
-
+    subNames.innerHTML = `和名: ${data.ja}<br>学名: <span>${renderSci(data.id, data.sci)}</span>`;
     header.appendChild(badge);
     header.appendChild(nameTag);
     header.appendChild(subNames);
@@ -438,13 +434,16 @@
     img.alt = data.name;
     hexInner.appendChild(img);
     hexOuter.appendChild(hexInner);
+    hexOuter.addEventListener('click', () => openDetail(data));
 
     const details = document.createElement('div');
     details.className = 'chara-details';
     details.innerHTML = `
       <div class="detail-item"><span class="detail-title">[分類]</span>${data.type}</div>
       <div class="detail-item"><span class="detail-title">[特徴]</span>${data.feature}</div>
+      <div class="tap-hint">タップで詳細・クイズ ▸</div>
     `;
+    details.addEventListener('click', () => openDetail(data));
 
     wrapper.appendChild(header);
     wrapper.appendChild(hexOuter);
@@ -452,42 +451,121 @@
     arContainer.appendChild(wrapper);
 
     const assignedAngle = (360 / dataset.length) * index;
-    charas.push({ el: wrapper, angle: assignedAngle, name: data.name });
+    charas.push({ el: wrapper, angle: assignedAngle, name: data.name, id: data.id });
   });
 
-  // センサー・カメラ起動処理
-  startBtn.addEventListener('click', async () => {
-    startScreen.style.display = 'none';
+  // ---------- 図鑑グリッド ----------
+  function renderGrid(){
+    gridList.innerHTML = '';
+    dataset.forEach(data => {
+      const cat = CATS[categoryOf(data.type)];
+      const isCollected = collected.has(data.id);
+      const cell = document.createElement('div');
+      cell.className = 'grid-cell' + (isCollected ? '' : ' uncollected');
+      cell.style.setProperty('--cell-color', cat.color);
+      cell.innerHTML = `
+        <div class="grid-hex"><div class="grid-hex-inner">
+          <img src="https://somekata.github.io/baikinscharacters/img/chara${data.id}.png" alt="${data.name}">
+        </div></div>
+        <div class="grid-cell-name">${isCollected ? data.name : '？？？'}</div>
+      `;
+      cell.addEventListener('click', () => openDetail(data));
+      gridList.appendChild(cell);
+    });
+  }
+  renderGrid();
+  updateProgressUI();
 
-    // 方位センサーの許可要求は、タップ操作からできるだけ間を置かず
-    // 最初の非同期処理として呼ぶ(iOSはユーザー操作の直後でないと拒否するため)
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-      try {
-        const permissionState = await DeviceOrientationEvent.requestPermission();
-        if (permissionState === 'granted') { window.addEventListener('deviceorientation', handleOrientation, true); }
-        else { alert('方位センサーの利用が許可されませんでした。設定から許可すると菌の方向が表示されます。'); }
-      } catch (err) { alert('方位センサーエラー: ' + err.message); }
-    } else {
-      window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-      window.addEventListener('deviceorientation', handleOrientation, true);
+  gridBtn.addEventListener('click', () => { renderGrid(); gridView.classList.add('open'); });
+  gridClose.addEventListener('click', () => gridView.classList.remove('open'));
+
+  // ---------- 詳細モーダル ----------
+  function openDetail(data){
+    const cat = CATS[categoryOf(data.type)];
+    detailCard.style.setProperty('--d-color', cat.color);
+    detailCard.innerHTML = `
+      <div class="d-badge">${cat.code}</div>
+      <div class="d-name">${data.name}</div>
+      <div class="d-sub">和名: ${data.ja}　／　学名: ${renderSci(data.id, data.sci)}　／　分類: ${data.type}</div>
+      <div class="d-feature">${data.feature}</div>
+      <button class="modal-close-btn" id="detail-quiz-btn">この菌でクイズに挑戦</button>
+      <button class="modal-close-btn" id="detail-close-btn" style="background:transparent;color:var(--text-hi);border:1px solid var(--panel-edge);margin-top:8px;">閉じる</button>
+    `;
+    detailModal.classList.add('open');
+    markCollected(data.id);
+    document.getElementById('detail-quiz-btn').addEventListener('click', () => {
+      detailModal.classList.remove('open');
+      openQuiz(data);
+    });
+    document.getElementById('detail-close-btn').addEventListener('click', () => detailModal.classList.remove('open'));
+  }
+  detailModal.addEventListener('click', (e) => { if (e.target === detailModal) detailModal.classList.remove('open'); });
+
+  // ---------- クイズ ----------
+  function shuffle(arr){
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
     }
+    return a;
+  }
+  function buildQuiz(entry){
+    const qTypes = [
+      { field:'sci', label:'この生物の学名は？', render:(v,id)=> id===entry.id ? renderSci(entry.id, v) : v },
+      { field:'type', label:'この生物の分類は？', render:(v)=> v },
+      { field:'ja', label:'この生物の和名は？', render:(v)=> v }
+    ];
+    const qType = qTypes[Math.floor(Math.random() * qTypes.length)];
+    const correct = entry[qType.field];
+    let pool = [...new Set(dataset.map(d => d[qType.field]))].filter(v => v !== correct);
+    const distractors = shuffle(pool).slice(0, 3);
+    const choices = shuffle([correct, ...distractors]);
+    return { question: qType.label, choices, correct, field: qType.field };
+  }
+  function openQuiz(entry){
+    const cat = CATS[categoryOf(entry.type)];
+    const quiz = buildQuiz(entry);
+    quizCard.innerHTML = `
+      <h2>クイズ</h2>
+      <div class="sub mono">${entry.name}</div>
+      <div class="q-text">${quiz.question}</div>
+      <div id="q-choices"></div>
+      <div id="quiz-feedback" class="mono"></div>
+      <button class="modal-close-btn" id="quiz-close-btn" style="margin-top:10px;">閉じる</button>
+    `;
+    const choicesEl = document.getElementById('q-choices');
+    quiz.choices.forEach(choice => {
+      const btn = document.createElement('button');
+      btn.className = 'q-choice';
+      btn.innerHTML = quiz.field === 'sci' ? renderSci(choice === entry.sci ? entry.id : -1, choice) : choice;
+      btn.addEventListener('click', () => {
+        [...choicesEl.children].forEach(c => c.disabled = true);
+        quizStats.total++;
+        if (choice === quiz.correct){
+          btn.classList.add('correct');
+          quizStats.correct++;
+          document.getElementById('quiz-feedback').innerText = `正解！ 現在の正答率 ${quizStats.correct}/${quizStats.total}`;
+        } else {
+          btn.classList.add('wrong');
+          [...choicesEl.children].find(c => c.innerText === quiz.correct || c.textContent === quiz.correct)?.classList.add('correct');
+          document.getElementById('quiz-feedback').innerText = `不正解。正解は「${quiz.correct}」。現在の正答率 ${quizStats.correct}/${quizStats.total}`;
+        }
+        try { localStorage.setItem('baikins_quiz', JSON.stringify(quizStats)); } catch(e){}
+      });
+      choicesEl.appendChild(btn);
+    });
+    quizModal.classList.add('open');
+    document.getElementById('quiz-close-btn').addEventListener('click', () => quizModal.classList.remove('open'));
+  }
+  quizModal.addEventListener('click', (e) => { if (e.target === quizModal) quizModal.classList.remove('open'); });
 
-    // カメラの許可要求はその後で行う
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      video.srcObject = stream;
-    } catch (err) { alert("カメラ起動失敗: " + err.message); }
-  });
-
-  // 向きの同期とロックオン判定
-  function handleOrientation(event) {
-    let heading = event.webkitCompassHeading || (360 - event.alpha);
-    if (heading === undefined) return;
-
+  // ---------- レイアウト計算(コンパス + 指ドラッグ) ----------
+  function render(){
+    const heading = ((deviceHeading + manualOffset) % 360 + 360) % 360;
     headingVal.innerText = String(Math.round(heading)).padStart(3, '0');
 
     let lockedName = null;
-
     charas.forEach(chara => {
       let diff = chara.angle - heading;
       while (diff < -180) diff += 360;
@@ -502,9 +580,9 @@
           chara.el.classList.add('active');
           lockedName = chara.name;
           chara.el.style.opacity = 1;
+          markCollected(chara.id);
         } else {
           chara.el.classList.remove('active');
-          // 中心から外れたキャラはより淡く表示し、中心のキャラを見やすくする
           const baseOpacity = 1 - (Math.abs(diff) / (fov / 2));
           chara.el.style.opacity = Math.max(baseOpacity * 0.45, 0.08);
         }
@@ -521,6 +599,59 @@
       scanStatus.innerText = 'SCANNING…';
       scanStatus.classList.remove('locked');
     }
+  }
+
+  // ---------- 指ドラッグ操作 ----------
+  let dragging = false;
+  let lastX = 0;
+  function dragStart(x){ dragging = true; lastX = x; }
+  function dragMove(x){
+    if (!dragging) return;
+    const dx = x - lastX;
+    lastX = x;
+    manualOffset -= dx * (fov / screenWidth) * 1.4;
+    render();
+  }
+  function dragEnd(){ dragging = false; }
+
+  dragLayer.addEventListener('pointerdown', (e) => { dragLayer.setPointerCapture(e.pointerId); dragStart(e.clientX); });
+  dragLayer.addEventListener('pointermove', (e) => dragMove(e.clientX));
+  dragLayer.addEventListener('pointerup', dragEnd);
+  dragLayer.addEventListener('pointercancel', dragEnd);
+
+  // ---------- 起動処理 ----------
+  startBtn.addEventListener('click', async () => {
+    startScreen.style.display = 'none';
+
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        const permissionState = await DeviceOrientationEvent.requestPermission();
+        if (permissionState === 'granted') {
+          hasOrientation = true;
+          window.addEventListener('deviceorientation', handleOrientation, true);
+        } else {
+          alert('方位センサーの利用が許可されませんでした。指でドラッグして操作できます。');
+        }
+      } catch (err) { alert('方位センサーエラー: ' + err.message); }
+    } else {
+      hasOrientation = true;
+      window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+      window.addEventListener('deviceorientation', handleOrientation, true);
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      video.srcObject = stream;
+    } catch (err) { alert("カメラ起動失敗: " + err.message); }
+
+    render();
+  });
+
+  function handleOrientation(event) {
+    let heading = event.webkitCompassHeading || (360 - event.alpha);
+    if (heading === undefined || isNaN(heading)) return;
+    deviceHeading = heading;
+    render();
   }
 </script>
 </body>
