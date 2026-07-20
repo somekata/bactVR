@@ -19,6 +19,7 @@
     --fungi:#f6c445;
     --text-hi:#eaf6fa;
     --text-dim:#7f95a0;
+    --gold:#ffd76a;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
   html,body{
@@ -49,7 +50,6 @@
   }
   @keyframes sweep{0%{transform:translateY(-140px);}100%{transform:translateY(100vh);}}
 
-  /* ドラッグ操作用の透明レイヤー(カメラ映像より上・キャラより下) */
   #drag-layer{position:absolute;inset:0;z-index:3;pointer-events:auto;}
 
   .corner{position:absolute;width:26px;height:26px;z-index:6;pointer-events:none;opacity:.75;}
@@ -79,23 +79,25 @@
   #hud-readout .status{color:var(--hud);font-weight:700;}
   #hud-readout .status.locked{color:var(--fungi);}
 
-  /* 右側ボタン列 (凡例 / 図鑑) */
-  #btn-stack{position:absolute;z-index:9;top:calc(52px + env(safe-area-inset-top));right:12px;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}
+  /* 画面右側、映像の邪魔にならない位置にまとめたボタン列 */
+  #btn-stack{position:absolute;z-index:9;top:calc(52px + env(safe-area-inset-top));right:12px;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none;}
   .round-btn{
-    width:32px;height:32px;border-radius:50%;pointer-events:auto;
+    width:38px;height:38px;border-radius:50%;pointer-events:auto;
     background:var(--panel);border:1px solid var(--panel-edge);color:var(--hud);
-    font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;
+    font-size:9px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;
     line-height:1.1;text-align:center;
   }
-  #progress-badge{font-size:9px;color:var(--text-dim);pointer-events:none;}
-  .mono#progress-badge b{color:var(--fungi);}
+  #book-btn{border-color:var(--gold);color:var(--gold);font-size:15px;}
+  #progress-badge{font-size:9px;color:var(--text-dim);pointer-events:none;text-align:center;}
+  .mono#progress-badge b{color:var(--gold);}
 
-  #legend-modal,#detail-modal,#quiz-modal{
+  #legend-modal,#detail-modal,#quiz-modal,#complete-modal{
     position:absolute;inset:0;z-index:22;display:none;
     background:rgba(2,5,8,0.72);backdrop-filter:blur(2px);
     align-items:center;justify-content:center;padding:24px;
   }
-  #legend-modal.open,#detail-modal.open,#quiz-modal.open{display:flex;}
+  #complete-modal{z-index:28;}
+  #legend-modal.open,#detail-modal.open,#quiz-modal.open,#complete-modal.open{display:flex;}
   .modal-card{
     width:100%;max-width:340px;max-height:82vh;overflow-y:auto;
     background:var(--panel);border:1px solid var(--panel-edge);border-radius:14px;padding:18px;
@@ -107,22 +109,33 @@
   .legend-dot{width:11px;height:11px;border-radius:3px;margin-top:3px;flex:none;}
   .legend-txt .code{font-size:10px;font-weight:700;}
   .legend-txt .desc{font-size:10px;color:var(--text-dim);margin-top:1px;}
-  .modal-close-btn{margin-top:14px;width:100%;padding:9px;border-radius:8px;border:none;background:var(--hud);color:#04222a;font-weight:700;font-size:12px;}
+  .modal-close-btn{margin-top:10px;width:100%;padding:9px;border-radius:8px;border:none;background:var(--hud);color:#04222a;font-weight:700;font-size:12px;}
+  .modal-ghost-btn{margin-top:8px;width:100%;padding:9px;border-radius:8px;border:1px solid var(--panel-edge);background:transparent;color:var(--text-hi);font-weight:700;font-size:12px;}
 
   /* 詳細モーダル */
-  #detail-card .d-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.1em;padding:2px 8px;border-radius:10px;border:1px solid var(--d-color,var(--hud));color:var(--d-color,var(--hud));margin-bottom:8px;}
+  #detail-card .d-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.1em;padding:2px 8px;border-radius:10px;border:1px solid var(--d-color,var(--hud));color:var(--d-color,var(--hud));margin-bottom:8px;margin-right:6px;}
+  #detail-card .d-caught{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.05em;padding:2px 8px;border-radius:10px;margin-bottom:8px;}
+  #detail-card .d-caught.yes{background:rgba(255,215,106,0.18);color:var(--gold);border:1px solid var(--gold);}
+  #detail-card .d-caught.no{background:rgba(255,255,255,0.05);color:var(--text-dim);border:1px solid var(--panel-edge);}
   #detail-card .d-name{font-size:17px;font-weight:900;margin-bottom:2px;}
   #detail-card .d-sub{font-size:11px;color:var(--text-dim);margin-bottom:12px;}
   #detail-card .d-sub i{font-style:italic;}
   #detail-card .d-feature{font-size:12.5px;line-height:1.7;background:rgba(255,255,255,0.04);border-radius:8px;padding:10px;border-left:3px solid var(--d-color,var(--hud));}
-  #detail-quiz-btn{margin-top:12px;width:100%;padding:9px;border-radius:8px;border:1px solid var(--hud);background:transparent;color:var(--hud);font-weight:700;font-size:12px;}
 
   /* クイズモーダル */
   #quiz-card .q-text{font-size:14px;font-weight:700;margin-bottom:14px;line-height:1.5;}
   .q-choice{display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:8px;border-radius:8px;border:1px solid var(--panel-edge);background:rgba(255,255,255,0.03);color:var(--text-hi);font-size:12.5px;}
   .q-choice.correct{border-color:#4ade80;background:rgba(74,222,128,0.15);color:#4ade80;}
   .q-choice.wrong{border-color:var(--gram-neg);background:rgba(255,77,106,0.15);color:var(--gram-neg);}
-  #quiz-feedback{font-size:11px;color:var(--text-dim);margin-top:6px;min-height:14px;}
+  #quiz-feedback{font-size:11.5px;margin-top:6px;min-height:16px;font-weight:700;}
+  #quiz-feedback.win{color:var(--gold);}
+  #quiz-feedback.lose{color:var(--text-dim);font-weight:400;}
+
+  /* コンプリートモーダル */
+  #complete-card{text-align:center;border:1px solid var(--gold);box-shadow:0 0 30px rgba(255,215,106,.35);}
+  #complete-card .big{font-size:34px;margin-bottom:6px;}
+  #complete-card h2{font-size:17px;color:var(--gold);text-align:center;}
+  #complete-card .sub{text-align:center;}
 
   /* AR要素コンテナ */
   #ar-container{position:absolute;top:calc(50% - 155px);left:50%;width:100%;height:460px;transform:translateX(-50%);z-index:4;pointer-events:none;}
@@ -136,6 +149,7 @@
   .chara-subnames i{font-style:italic;}
 
   .hex-outer{width:150px;height:150px;clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);background:var(--cat-color);padding:3px;filter:drop-shadow(0 0 10px color-mix(in srgb, var(--cat-color) 60%, transparent));transition:transform .2s ease;pointer-events:auto;cursor:pointer;}
+  .hex-outer.caught-ring{box-shadow:0 0 0 3px var(--gold);}
   .hex-inner{width:100%;height:100%;clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);background:#070b10;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
   .hex-inner::before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);background-size:14px 14px;}
   .chara-img{width:76%;height:76%;object-fit:contain;position:relative;z-index:1;}
@@ -144,29 +158,29 @@
   .detail-item{margin-bottom:4px;}
   .detail-item:last-child{margin-bottom:0;}
   .detail-title{color:var(--cat-color);font-weight:700;margin-right:4px;}
-  .tap-hint{font-size:9px;color:var(--text-dim);margin-top:6px;text-align:center;}
+  .tap-hint{font-size:9px;color:var(--gold);margin-top:6px;text-align:center;}
 
   .chara-wrapper.active .chara-header{opacity:1;transform:translateY(0);}
   .chara-wrapper.active .hex-outer{transform:scale(1.08);}
   .chara-wrapper.active .chara-details{opacity:1;transform:translateY(0);}
 
-  /* 図鑑グリッドビュー */
-  #grid-view{position:absolute;inset:0;z-index:15;display:none;flex-direction:column;background:rgba(3,6,10,0.97);}
-  #grid-view.open{display:flex;}
-  #grid-header{padding:calc(14px + env(safe-area-inset-top)) 16px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--panel-edge);}
-  #grid-header h2{margin:0;font-size:14px;}
-  #grid-header .sub{font-size:10px;color:var(--text-dim);}
-  #grid-close{background:none;border:1px solid var(--panel-edge);color:var(--text-hi);border-radius:8px;padding:6px 10px;font-size:11px;}
-  #grid-scroll{flex:1;overflow-y:auto;padding:14px 14px calc(14px + env(safe-area-inset-bottom));}
-  #grid-list{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
-  .grid-cell{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
-  .grid-hex{width:100%;aspect-ratio:1;clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);background:var(--cell-color);padding:2px;position:relative;}
-  .grid-hex-inner{width:100%;height:100%;clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);background:#0a0f14;display:flex;align-items:center;justify-content:center;}
-  .grid-hex-inner img{width:82%;height:82%;object-fit:contain;}
-  .grid-cell.uncollected .grid-hex{filter:grayscale(1) brightness(0.35);}
-  .grid-cell.uncollected .grid-hex-inner img{opacity:0.5;}
-  .grid-cell-name{font-size:9px;margin-top:4px;text-align:center;color:var(--text-dim);}
-  .grid-cell:not(.uncollected) .grid-cell-name{color:var(--text-hi);}
+  /* バイキンズ館(コレクション手帳) */
+  #book-view{position:absolute;inset:0;z-index:15;display:none;flex-direction:column;background:rgba(3,6,10,0.97);}
+  #book-view.open{display:flex;}
+  #book-header{padding:calc(14px + env(safe-area-inset-top)) 16px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--panel-edge);}
+  #book-header h2{margin:0;font-size:14px;color:var(--gold);}
+  #book-header .sub{font-size:10px;color:var(--text-dim);}
+  #book-close{background:none;border:1px solid var(--panel-edge);color:var(--text-hi);border-radius:8px;padding:6px 10px;font-size:11px;}
+  #book-scroll{flex:1;overflow-y:auto;padding:14px 14px calc(14px + env(safe-area-inset-bottom));}
+  #book-list{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .book-cell{display:flex;flex-direction:column;align-items:center;cursor:pointer;}
+  .book-hex{width:100%;aspect-ratio:1;clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);background:var(--cell-color);padding:2px;position:relative;}
+  .book-hex-inner{width:100%;height:100%;clip-path:polygon(25% 0%,75% 0%,100% 50%,75% 100%,25% 100%,0% 50%);background:#0a0f14;display:flex;align-items:center;justify-content:center;}
+  .book-hex-inner img{width:82%;height:82%;object-fit:contain;}
+  .book-cell.uncaught .book-hex{filter:grayscale(1) brightness(0.35);}
+  .book-cell.uncaught .book-hex-inner img{opacity:0.5;}
+  .book-cell-name{font-size:9px;margin-top:4px;text-align:center;color:var(--text-dim);}
+  .book-cell:not(.uncaught) .book-cell-name{color:var(--gold);}
 
   #start-screen{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:radial-gradient(ellipse at center, #0c1620 0%, #05080c 70%);padding:20px;}
   #start-screen .eyebrow{font-size:10px;letter-spacing:.25em;color:var(--hud);}
@@ -208,9 +222,9 @@
 </div>
 
 <div id="btn-stack">
-  <button class="round-btn" id="legend-btn" aria-label="染色カラーの凡例">凡</button>
-  <button class="round-btn" id="grid-btn" aria-label="図鑑を開く">図鑑</button>
+  <button class="round-btn" id="book-btn" aria-label="バイキンズ館(コレクション手帳)を開く">館</button>
   <div id="progress-badge" class="mono"><b id="progress-count">0</b>/32</div>
+  <button class="round-btn" id="legend-btn" aria-label="染色カラーの凡例">凡</button>
 </div>
 
 <div id="ar-container"></div>
@@ -218,7 +232,7 @@
 <div id="start-screen">
   <div class="eyebrow mono">SYSTEM OFFLINE</div>
   <h1>細菌・真菌<br>フィールドスキャナー</h1>
-  <p>カメラと方位センサーへのアクセスを許可すると始まります。指で画面を左右にドラッグしても視点を動かせます。菌をタップすると詳細とクイズに挑戦できます。</p>
+  <p>カメラと方位センサーへのアクセスを許可すると始まります。指で画面を左右にドラッグしても視点を動かせます。菌を見つけてタップし、クイズに正解すると「バイキンズ館」に捕獲されます。</p>
   <button id="start-btn">
     <span class="ring"></span>
     起動<br>INITIALIZE
@@ -240,26 +254,31 @@
 </div>
 
 <div id="detail-modal">
-  <div class="modal-card" id="detail-card">
-    <!-- JSで動的に生成 -->
-  </div>
+  <div class="modal-card" id="detail-card"></div>
 </div>
 
 <div id="quiz-modal">
-  <div class="modal-card" id="quiz-card">
-    <!-- JSで動的に生成 -->
+  <div class="modal-card" id="quiz-card"></div>
+</div>
+
+<div id="complete-modal">
+  <div class="modal-card" id="complete-card">
+    <div class="big">🏆</div>
+    <h2>コンプリート！</h2>
+    <div class="sub">全32種のバイキンズを捕獲しました。おめでとうございます！</div>
+    <button class="modal-close-btn" id="complete-close-btn">閉じる</button>
   </div>
 </div>
 
-<div id="grid-view">
-  <div id="grid-header">
+<div id="book-view">
+  <div id="book-header">
     <div>
-      <h2>バイキンズ図鑑</h2>
-      <div class="sub mono"><span id="grid-progress-text">0/32</span> 走査済み</div>
+      <h2>バイキンズ館</h2>
+      <div class="sub mono"><span id="book-progress-text">0/32</span> 捕獲済み</div>
     </div>
-    <button id="grid-close">閉じる</button>
+    <button id="book-close">閉じる</button>
   </div>
-  <div id="grid-scroll"><div id="grid-list"></div></div>
+  <div id="book-scroll"><div id="book-list"></div></div>
 </div>
 
 <script>
@@ -276,27 +295,27 @@
   const legendClose = document.getElementById('legend-close');
   const legendList = document.getElementById('legend-list');
 
-  const gridBtn = document.getElementById('grid-btn');
-  const gridView = document.getElementById('grid-view');
-  const gridClose = document.getElementById('grid-close');
-  const gridList = document.getElementById('grid-list');
-  const gridProgressText = document.getElementById('grid-progress-text');
+  const bookBtn = document.getElementById('book-btn');
+  const bookView = document.getElementById('book-view');
+  const bookClose = document.getElementById('book-close');
+  const bookList = document.getElementById('book-list');
+  const bookProgressText = document.getElementById('book-progress-text');
   const progressCount = document.getElementById('progress-count');
 
   const detailModal = document.getElementById('detail-modal');
   const detailCard = document.getElementById('detail-card');
   const quizModal = document.getElementById('quiz-modal');
   const quizCard = document.getElementById('quiz-card');
+  const completeModal = document.getElementById('complete-modal');
+  const completeCloseBtn = document.getElementById('complete-close-btn');
 
   const fov = 60;
   const screenWidth = window.innerWidth;
   const charas = [];
 
-  let deviceHeading = 0;      // センサーから得た方位
-  let manualOffset = 0;       // 指ドラッグによる補正
-  let hasOrientation = false;
+  let deviceHeading = 0;
+  let manualOffset = 0;
 
-  // 染色・分類に基づくカラーコード定義
   const CATS = {
     gram_pos: { code:'GRAM (+)', label:'グラム陽性', color:'var(--gram-pos)', desc:'クリスタルバイオレットで染色（紫）。細胞壁が厚い。' },
     gram_neg: { code:'GRAM (–)', label:'グラム陰性', color:'var(--gram-neg)', desc:'サフラニンで対比染色（赤）。外膜を持つ。' },
@@ -315,7 +334,7 @@
   }
 
   function renderSci(id, sci){
-    if (id === 6) return sci; // EHEC は学名ではなく略称
+    if (id === 6) return sci;
     if (sci.indexOf(' complex') !== -1){
       const base = sci.replace(' complex','');
       return `<i>${base}</i> complex`;
@@ -362,25 +381,29 @@
     { id: 32, name: "タンソ", ja: "炭疽菌", sci: "Bacillus anthracis", type: "グラム陽性桿菌", feature: "芽胞を形成し環境中で長期間生存。バイオテロのリスクがある規制対象菌。" }
   ];
 
-  // ---------- 進捗(図鑑コンプリート)管理 ----------
-  let collected = new Set();
-  try { collected = new Set(JSON.parse(localStorage.getItem('baikins_collected') || '[]')); } catch(e){}
+  // ---------- 捕獲(コレクション)管理: クイズに正解した菌だけが「捕獲済み」 ----------
+  let caught = new Set();
+  try { caught = new Set(JSON.parse(localStorage.getItem('baikins_caught_v2') || '[]')); } catch(e){}
   let quizStats = { correct: 0, total: 0 };
   try { quizStats = JSON.parse(localStorage.getItem('baikins_quiz')) || quizStats; } catch(e){}
+  let completeShown = false;
+  try { completeShown = localStorage.getItem('baikins_complete_shown') === '1'; } catch(e){}
 
-  function saveCollected(){
-    try { localStorage.setItem('baikins_collected', JSON.stringify([...collected])); } catch(e){}
-  }
+  function saveCaught(){ try { localStorage.setItem('baikins_caught_v2', JSON.stringify([...caught])); } catch(e){} }
   function updateProgressUI(){
-    progressCount.innerText = collected.size;
-    gridProgressText.innerText = `${collected.size}/32`;
+    progressCount.innerText = caught.size;
+    bookProgressText.innerText = `${caught.size}/32`;
   }
-  function markCollected(id){
-    if (!collected.has(id)){
-      collected.add(id);
-      saveCollected();
-      updateProgressUI();
-      renderGrid();
+  function catchEntry(id){
+    if (caught.has(id)) return;
+    caught.add(id);
+    saveCaught();
+    updateProgressUI();
+    renderBook();
+    if (caught.size >= 32 && !completeShown){
+      completeShown = true;
+      try { localStorage.setItem('baikins_complete_shown', '1'); } catch(e){}
+      setTimeout(() => completeModal.classList.add('open'), 600);
     }
   }
 
@@ -399,6 +422,7 @@
   legendBtn.addEventListener('click', () => legendModal.classList.add('open'));
   legendClose.addEventListener('click', () => legendModal.classList.remove('open'));
   legendModal.addEventListener('click', (e) => { if (e.target === legendModal) legendModal.classList.remove('open'); });
+  completeCloseBtn.addEventListener('click', () => completeModal.classList.remove('open'));
 
   // ---------- AR要素の生成 ----------
   dataset.forEach((data, index) => {
@@ -441,7 +465,7 @@
     details.innerHTML = `
       <div class="detail-item"><span class="detail-title">[分類]</span>${data.type}</div>
       <div class="detail-item"><span class="detail-title">[特徴]</span>${data.feature}</div>
-      <div class="tap-hint">タップで詳細・クイズ ▸</div>
+      <div class="tap-hint">タップしてクイズに挑戦・捕獲 ▸</div>
     `;
     details.addEventListener('click', () => openDetail(data));
 
@@ -451,48 +475,49 @@
     arContainer.appendChild(wrapper);
 
     const assignedAngle = (360 / dataset.length) * index;
-    charas.push({ el: wrapper, angle: assignedAngle, name: data.name, id: data.id });
+    charas.push({ el: wrapper, hexOuter, angle: assignedAngle, name: data.name, id: data.id });
   });
 
-  // ---------- 図鑑グリッド ----------
-  function renderGrid(){
-    gridList.innerHTML = '';
+  // ---------- バイキンズ館(コレクション手帳) ----------
+  function renderBook(){
+    bookList.innerHTML = '';
     dataset.forEach(data => {
       const cat = CATS[categoryOf(data.type)];
-      const isCollected = collected.has(data.id);
+      const isCaught = caught.has(data.id);
       const cell = document.createElement('div');
-      cell.className = 'grid-cell' + (isCollected ? '' : ' uncollected');
+      cell.className = 'book-cell' + (isCaught ? '' : ' uncaught');
       cell.style.setProperty('--cell-color', cat.color);
       cell.innerHTML = `
-        <div class="grid-hex"><div class="grid-hex-inner">
+        <div class="book-hex"><div class="book-hex-inner">
           <img src="https://somekata.github.io/baikinscharacters/img/chara${data.id}.png" alt="${data.name}">
         </div></div>
-        <div class="grid-cell-name">${isCollected ? data.name : '？？？'}</div>
+        <div class="book-cell-name">${isCaught ? data.name : '？？？'}</div>
       `;
       cell.addEventListener('click', () => openDetail(data));
-      gridList.appendChild(cell);
+      bookList.appendChild(cell);
     });
   }
-  renderGrid();
+  renderBook();
   updateProgressUI();
 
-  gridBtn.addEventListener('click', () => { renderGrid(); gridView.classList.add('open'); });
-  gridClose.addEventListener('click', () => gridView.classList.remove('open'));
+  bookBtn.addEventListener('click', () => { renderBook(); bookView.classList.add('open'); });
+  bookClose.addEventListener('click', () => bookView.classList.remove('open'));
 
   // ---------- 詳細モーダル ----------
   function openDetail(data){
     const cat = CATS[categoryOf(data.type)];
+    const isCaught = caught.has(data.id);
     detailCard.style.setProperty('--d-color', cat.color);
     detailCard.innerHTML = `
       <div class="d-badge">${cat.code}</div>
+      <div class="d-caught ${isCaught ? 'yes' : 'no'}">${isCaught ? '捕獲済み ✓' : '未捕獲'}</div>
       <div class="d-name">${data.name}</div>
       <div class="d-sub">和名: ${data.ja}　／　学名: ${renderSci(data.id, data.sci)}　／　分類: ${data.type}</div>
       <div class="d-feature">${data.feature}</div>
-      <button class="modal-close-btn" id="detail-quiz-btn">この菌でクイズに挑戦</button>
-      <button class="modal-close-btn" id="detail-close-btn" style="background:transparent;color:var(--text-hi);border:1px solid var(--panel-edge);margin-top:8px;">閉じる</button>
+      <button class="modal-close-btn" id="detail-quiz-btn">${isCaught ? 'もう一度クイズに挑戦' : 'クイズに挑戦してつかまえる！'}</button>
+      <button class="modal-ghost-btn" id="detail-close-btn">閉じる</button>
     `;
     detailModal.classList.add('open');
-    markCollected(data.id);
     document.getElementById('detail-quiz-btn').addEventListener('click', () => {
       detailModal.classList.remove('open');
       openQuiz(data);
@@ -512,9 +537,9 @@
   }
   function buildQuiz(entry){
     const qTypes = [
-      { field:'sci', label:'この生物の学名は？', render:(v,id)=> id===entry.id ? renderSci(entry.id, v) : v },
-      { field:'type', label:'この生物の分類は？', render:(v)=> v },
-      { field:'ja', label:'この生物の和名は？', render:(v)=> v }
+      { field:'sci', label:'この生物の学名は？' },
+      { field:'type', label:'この生物の分類は？' },
+      { field:'ja', label:'この生物の和名は？' }
     ];
     const qType = qTypes[Math.floor(Math.random() * qTypes.length)];
     const correct = entry[qType.field];
@@ -524,32 +549,36 @@
     return { question: qType.label, choices, correct, field: qType.field };
   }
   function openQuiz(entry){
-    const cat = CATS[categoryOf(entry.type)];
     const quiz = buildQuiz(entry);
     quizCard.innerHTML = `
-      <h2>クイズ</h2>
+      <h2>捕獲チャレンジ</h2>
       <div class="sub mono">${entry.name}</div>
       <div class="q-text">${quiz.question}</div>
       <div id="q-choices"></div>
       <div id="quiz-feedback" class="mono"></div>
-      <button class="modal-close-btn" id="quiz-close-btn" style="margin-top:10px;">閉じる</button>
+      <button class="modal-ghost-btn" id="quiz-close-btn" style="margin-top:6px;">閉じる</button>
     `;
     const choicesEl = document.getElementById('q-choices');
     quiz.choices.forEach(choice => {
       const btn = document.createElement('button');
       btn.className = 'q-choice';
       btn.innerHTML = quiz.field === 'sci' ? renderSci(choice === entry.sci ? entry.id : -1, choice) : choice;
+      btn.dataset.value = choice;
       btn.addEventListener('click', () => {
         [...choicesEl.children].forEach(c => c.disabled = true);
         quizStats.total++;
+        const feedback = document.getElementById('quiz-feedback');
         if (choice === quiz.correct){
           btn.classList.add('correct');
           quizStats.correct++;
-          document.getElementById('quiz-feedback').innerText = `正解！ 現在の正答率 ${quizStats.correct}/${quizStats.total}`;
+          feedback.className = 'mono win';
+          feedback.innerText = `捕獲成功！「${entry.name}」がバイキンズ館に加わりました。(正答率 ${quizStats.correct}/${quizStats.total})`;
+          catchEntry(entry.id);
         } else {
           btn.classList.add('wrong');
-          [...choicesEl.children].find(c => c.innerText === quiz.correct || c.textContent === quiz.correct)?.classList.add('correct');
-          document.getElementById('quiz-feedback').innerText = `不正解。正解は「${quiz.correct}」。現在の正答率 ${quizStats.correct}/${quizStats.total}`;
+          [...choicesEl.children].forEach(c => { if (c.dataset.value === quiz.correct) c.classList.add('correct'); });
+          feedback.className = 'mono lose';
+          feedback.innerText = `逃げられた…正解は「${quiz.correct}」。もう一度挑戦できます。(正答率 ${quizStats.correct}/${quizStats.total})`;
         }
         try { localStorage.setItem('baikins_quiz', JSON.stringify(quizStats)); } catch(e){}
       });
@@ -575,12 +604,12 @@
         const xPosition = (diff / (fov / 2)) * (screenWidth / 2);
         chara.el.style.display = 'flex';
         chara.el.style.transform = `translateX(${xPosition}px)`;
+        chara.hexOuter.classList.toggle('caught-ring', caught.has(chara.id));
 
         if (Math.abs(diff) < 6) {
           chara.el.classList.add('active');
           lockedName = chara.name;
           chara.el.style.opacity = 1;
-          markCollected(chara.id);
         } else {
           chara.el.classList.remove('active');
           const baseOpacity = 1 - (Math.abs(diff) / (fov / 2));
@@ -627,14 +656,12 @@
       try {
         const permissionState = await DeviceOrientationEvent.requestPermission();
         if (permissionState === 'granted') {
-          hasOrientation = true;
           window.addEventListener('deviceorientation', handleOrientation, true);
         } else {
           alert('方位センサーの利用が許可されませんでした。指でドラッグして操作できます。');
         }
       } catch (err) { alert('方位センサーエラー: ' + err.message); }
     } else {
-      hasOrientation = true;
       window.addEventListener('deviceorientationabsolute', handleOrientation, true);
       window.addEventListener('deviceorientation', handleOrientation, true);
     }
